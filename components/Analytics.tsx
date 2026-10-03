@@ -98,7 +98,8 @@ export function Analytics() {
     <div role="dialog" aria-label="Visit statistics" className="fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4">
       <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-xl shadow-black/50 backdrop-blur sm:flex-row sm:items-center">
         <p className="flex-1 leading-relaxed text-muted">
-          May we count visits with Google Analytics? It sets cookies and only runs if you allow it.
+          Allowing cookies helps us count how many people visit Foxlight. We use Google Analytics only if you
+          agree — otherwise nothing is collected. Thank you!
         </p>
         <div className="flex shrink-0 gap-2">
           <button onClick={() => { unload(); save("denied"); }}

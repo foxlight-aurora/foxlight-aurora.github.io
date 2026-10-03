@@ -123,8 +123,8 @@ export default function Home() {
           A forecast, not a promise — the aurora is famously unpredictable.
         </p>
         <p className="mt-1">
-          An independent, non-commercial project — not affiliated with FMI or NOAA. No sign-up. Visits are counted with
-          Google Analytics only if you allow it (<CookieSettings />). A starting point you search for is looked up on
+          An independent, non-commercial project — not affiliated with FMI or NOAA. No sign-up. We only count visitors
+          (with Google Analytics) if you allow it — you can change your mind any time in <CookieSettings />. A starting point you search for is looked up on
           OpenStreetMap and saved only in your browser.{" "}
           <a className="underline underline-offset-4 hover:text-muted" href="https://github.com/foxlight-aurora/foxlight-aurora.github.io">
             Source code on GitHub
