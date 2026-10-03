@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { AUTO_RELOAD } from "./Analytics";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const CHECK_EVERY = 5 * 60 * 1000;
@@ -17,7 +18,12 @@ export function AutoRefresh({ generatedAt }: { generatedAt: string }) {
       try {
         const res = await fetch(`${BASE}/data.json`, { cache: "no-store" });
         const { generatedAt: latest } = await res.json();
-        if (Date.parse(latest) - Date.parse(generatedAt) > NEWER_BY) location.reload();
+        if (Date.parse(latest) - Date.parse(generatedAt) > NEWER_BY) {
+          try {
+            sessionStorage.setItem(AUTO_RELOAD, "1");
+          } catch {}
+          location.reload();
+        }
       } catch {}
     };
     check();
