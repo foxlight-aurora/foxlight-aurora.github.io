@@ -95,11 +95,13 @@ export function Analytics() {
   if (choice !== null) return null;
 
   return (
+    <>
+    {/* Scroll room so the banner never hides the end of the footer. */}
+    <div aria-hidden className="h-40 sm:h-24" />
     <div role="dialog" aria-label="Visit statistics" className="fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4">
       <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-xl shadow-black/50 backdrop-blur sm:flex-row sm:items-center">
         <p className="flex-1 leading-relaxed text-muted">
-          <span className="text-ink">Can we count your visit?</span> It just helps us see how many people use Foxlight.
-          <span className="block text-xs text-faint">Counted with Google Analytics. Say no and nothing is sent.</span>
+          Allowing cookies lets us use Google Analytics for website statistics.
         </p>
         <div className="flex shrink-0 gap-2">
           <button onClick={() => { unload(); save("denied"); }}
@@ -113,6 +115,7 @@ export function Analytics() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
