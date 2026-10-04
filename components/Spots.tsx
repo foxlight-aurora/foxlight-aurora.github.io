@@ -41,7 +41,7 @@ const parseSaved = (raw: string | null): Origin | null => {
   }
 };
 
-export function Spots({ spots, dark }: { spots: AuroraData["spots"]; dark: boolean }) {
+export function Spots({ spots, dark }: { spots: Omit<AuroraData["spots"][number], "hours" | "nights">[]; dark: boolean }) {
   // Origin remembered from a previous visit (read after hydration; the server always renders the city centre).
   const saved = useSyncExternalStore(noSubscribe, readSaved, () => null);
   const [picked, setPicked] = useState<Origin | null>(null);

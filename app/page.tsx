@@ -2,16 +2,17 @@ import { Advanced } from "@/components/Advanced";
 import { CookieSettings } from "@/components/Analytics";
 import { AuroraFx } from "@/components/AuroraFx";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { Hero } from "@/components/Hero";
+import { Hero, recommend } from "@/components/Hero";
 import { Metrics } from "@/components/Metrics";
 import { Nights } from "@/components/Nights";
 import { Outlook } from "@/components/Outlook";
+import { SpotChoiceProvider } from "@/components/SpotChoice";
 import { Spots } from "@/components/Spots";
 import { StaleBanner } from "@/components/StaleBanner";
 import { Section } from "@/components/ui";
 import { loadAuroraData } from "@/lib/load";
 import { day, time } from "@/lib/format";
-import { OULU } from "@/lib/oulu";
+import { CITY_CENTRE, OULU, rankSpots } from "@/lib/oulu";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 
 const TIPS = [
@@ -67,6 +68,9 @@ function structuredData(generatedAt: string) {
 
 export default function Home() {
   const data = loadAuroraData();
+  // Spots for the picker, best first; it starts at the spot the hero recommends.
+  const spotOptions = rankSpots(data.spots, CITY_CENTRE, "chance").map(({ id, name }) => ({ id, name }));
+  const spot = recommend(data).where?.id ?? spotOptions[0].id;
   return (
     <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData(data.generatedAt) }} />
@@ -74,9 +78,12 @@ export default function Home() {
     <main className="relative z-[1] mx-auto max-w-3xl px-4 pb-20 sm:px-6">
       <AutoRefresh generatedAt={data.generatedAt} />
       <StaleBanner generatedAt={data.generatedAt} />
-      <Hero data={data} />
-      <Nights data={data} />
-      <Spots spots={data.spots} dark={data.now.sunAlt < -6} />
+      <SpotChoiceProvider initial={spot} options={spotOptions}>
+        <Hero data={data} />
+        <Nights data={data} />
+      </SpotChoiceProvider>
+      {/* The per-spot hours only feed "Next nights"; keep them out of this client component. */}
+      <Spots spots={data.spots.map((s) => ({ ...s, hours: undefined, nights: undefined }))} dark={data.now.sunAlt < -6} />
       <Metrics data={data} />
       <Outlook data={data} />
 

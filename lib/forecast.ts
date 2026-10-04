@@ -56,7 +56,8 @@ const nightKey = new Intl.DateTimeFormat("en-CA", { timeZone: OULU.tz });
 export const nightOf = (iso: string) => nightKey.format(new Date(Date.parse(iso) - 12 * HOUR));
 const DARKEST_MIN_KP = Math.min(...SPOTS.map((s) => s.minKp));
 
-export function summarizeNights(hours: Hour[]): Night[] {
+/** `minKp`: the darkest sky the hours cover, used to tell whether clouds or activity hold a night back. */
+export function summarizeNights(hours: Hour[], minKp = DARKEST_MIN_KP): Night[] {
   const groups = new Map<string, Hour[]>();
   for (const h of hours) {
     if (darknessFactor(h.sunAlt) === 0) continue;
@@ -80,7 +81,7 @@ export function summarizeNights(hours: Hour[]): Night[] {
       spotId: peak.spotId,
       kp: Math.max(...hs.map((h) => h.kp)),
       cloud: peak.cloud,
-      limit: clear < auroraFactor(peak.kp, DARKEST_MIN_KP) ? "clouds" : "activity",
+      limit: clear < auroraFactor(peak.kp, minKp) ? "clouds" : "activity",
     };
   });
 }

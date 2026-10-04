@@ -78,6 +78,17 @@ describe("getAuroraData", () => {
     expect(d.nights.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("gives every spot its own nights and dark hours", async () => {
+    serve(healthy());
+    const d = await getAuroraData();
+    for (const s of d.spots) {
+      expect(s.nights.map((n) => n.date)).toEqual(d.nights.map((n) => n.date));
+      expect(s.nights.every((n) => n.spotId === s.id)).toBe(true);
+      expect(s.hours.every((h) => h.spotId === s.id && h.sunAlt < -6)).toBe(true);
+      expect(s.best?.peak).toBe(Math.max(...s.nights.map((n) => n.peak)));
+    }
+  });
+
   describe("critical sources: fail the build so the last correct site stays online", () => {
     it("Kp forecast down", async () => {
       serve({ ...healthy(), "noaa-planetary-k-index-forecast": "down" });

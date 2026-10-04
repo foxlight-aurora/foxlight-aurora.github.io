@@ -6,21 +6,21 @@ import { hour, kp, time, TONE } from "@/lib/format";
 import { scoreLabel } from "@/lib/oulu";
 import { Score } from "./ui";
 
-type HourView = { time: string; score: number; kp: number; cloud: number | null; spot: string };
-export type NightView = Night & { label: string; day: string; spot: string; hours: HourView[] };
+type HourView = { time: string; score: number; kp: number; cloud: number | null };
+export type NightView = Night & { label: string; day: string; minKp: number; hours: HourView[] };
 
 const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
 
 /** Summary line for a whole night (shown until an hour is picked). */
 function summary(n: NightView, full: boolean) {
-  if (n.peak >= 15) return full ? `Best ${time(n.start)}–${time(n.end)} at ${n.spot} · Kp ${kp(n.kp)}` : `${time(n.start)}–${time(n.end)}`;
+  if (n.peak >= 15) return full ? `Best ${time(n.start)}–${time(n.end)} · Kp ${kp(n.kp)}` : `${time(n.start)}–${time(n.end)}`;
   if (n.limit === "clouds") return full ? `Cloudy (${pct(n.cloud)}%) — auroras hide behind clouds` : "Cloudy";
-  return full ? `Low activity (Kp ${kp(n.kp)}) — Oulu needs about Kp 2+` : "Quiet";
+  return full ? `Low activity (Kp ${kp(n.kp)}) — this spot needs about Kp ${n.minKp}+` : "Quiet";
 }
 
 /**
  * Three nights side by side. Hover (mouse) or tap a night to widen it; inside the wide one,
- * hover or tap an hour bar to read its chance, Kp, clouds and best spot.
+ * hover or tap an hour bar to read its chance, Kp and clouds.
  */
 export function NightColumns({ nights }: { nights: NightView[] }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -70,7 +70,7 @@ export function NightColumns({ nights }: { nights: NightView[] }) {
 
             <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted sm:text-sm sm:leading-5" aria-live={wide ? "polite" : undefined}>
               {squeezed ? " " : h
-                ? `${time(h.time)} · ${scoreLabel(h.score).label} ${h.score} · Kp ${kp(h.kp)} · clouds ${pct(h.cloud)}% · ${h.spot}`
+                ? `${time(h.time)} · ${scoreLabel(h.score).label} ${h.score} · Kp ${kp(h.kp)} · clouds ${pct(h.cloud)}%`
                 : summary(n, wide)}
             </p>
 
@@ -86,7 +86,7 @@ export function NightColumns({ nights }: { nights: NightView[] }) {
                 <div className="absolute inset-0 flex">
                   {n.hours.map((x, j) => (
                     <button key={x.time} type="button" className="flex-1 focus:outline-none focus-visible:bg-ink/5"
-                      aria-label={`${time(x.time)}: chance ${x.score}, Kp ${kp(x.kp)}, clouds ${pct(x.cloud)}%, ${x.spot}`}
+                      aria-label={`${time(x.time)}: chance ${x.score}, Kp ${kp(x.kp)}, clouds ${pct(x.cloud)}%`}
                       onPointerEnter={() => setPicked(j)} onFocus={() => setPicked(j)}
                       onClick={(e) => { e.stopPropagation(); setPicked(j); }} />
                   ))}

@@ -1,9 +1,12 @@
 import type { AuroraData } from "@/lib/data";
-import { nightLabel, outlookHighlights, verdict, type Verdict } from "@/lib/forecast";
+import { nightLabel, outlookHighlights, verdict, type Night, type Verdict } from "@/lib/forecast";
 import { date, day, kp, time, TONE } from "@/lib/format";
 import { directionsUrl } from "@/lib/oulu";
+import { BySpot, SpotSelect } from "./SpotChoice";
 import { Score } from "./ui";
 import { Term } from "./Term";
+
+type Spot = AuroraData["spots"][number];
 
 const TITLE: Record<Verdict, string> = {
   now: "Go out now",
@@ -27,31 +30,68 @@ const ALERT = {
   quiet: { text: "Quiet — auroras rarely reach Oulu at this level", tone: "low" },
 } as const;
 
-export function Hero({ data }: { data: AuroraData }) {
+const SUB = "mt-0.5 block text-xs font-normal text-muted";
+const B = "font-medium text-ink";
+const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
+
+/** The hero's answer: the verdict, tonight, the window it points to and where to go. */
+export function recommend(data: AuroraData) {
   const now = new Date(data.generatedAt);
   const tonight = data.nights.find((n) => nightLabel(n.date, now) === "Tonight") ?? data.nights[0] ?? null;
   const bestNow = data.spots.reduce((a, b) => (b.now > a.now ? b : a));
   const v = verdict({ nowScore: bestNow.now, sunAlt: data.now.sunAlt, tonight });
-  const spotOf = (id: string) => data.spots.find((s) => s.id === id)!;
-
   const later = data.nights.find((n) => n !== tonight && n.peak >= 15);
   // The window the When/Where/Chance row describes: now, tonight, or the next good night.
   const target = v === "now" ? null : tonight && tonight.peak >= 15 ? tonight : (later ?? null);
-  const where = v === "now" ? bestNow : target ? spotOf(target.spotId) : null;
-  const score = v === "now" ? bestNow.now : (target ?? tonight)?.peak ?? 0;
-  const when =
-    v === "now"
-      ? { date: day(data.generatedAt), time: `Now – ${data.now.dark ? time(data.now.dark.end) : "dawn"}` }
-      : target
-        ? {
-            date: day(target.start),
-            // A window starting after midnight belongs to the previous evening's night (as in "Next nights").
-            time: `${time(target.start)}–${time(target.end)}${day(target.start) !== date(target.date) ? ` · ${date(target.date).split(" ")[0]} night` : ""}`,
-          }
-        : null;
-  // Kp and clouds behind the chance figure.
-  const basis = v === "now" ? { kp: data.now.effectiveKp, cloud: bestNow.cloud } : (target ?? tonight);
-  const sub = "mt-0.5 block text-xs font-normal text-muted";
+  const where = v === "now" ? bestNow : target ? data.spots.find((s) => s.id === target.spotId)! : null;
+  return { now, tonight, bestNow, v, later, target, where };
+}
+
+/** "Sat 4 Oct" + "05:00–07:00"; a window starting after midnight belongs to the previous evening's night (as in "Next nights"). */
+const windowOf = (n: Night) => ({
+  date: day(n.start),
+  time: `${time(n.start)}–${time(n.end)}${day(n.start) !== date(n.date) ? ` · ${date(n.date).split(" ")[0]} night` : ""}`,
+});
+
+function Cells(p: { when: { date: string; time: string } | null; where: Spot | null; score: number; chance: React.ReactNode }) {
+  return [
+    ["When", "When", p.when ? <>{p.when.date}<span className={SUB}>{p.when.time}</span></> : "–"],
+    ["Where", "Where", p.where ? (
+      <>
+        {p.where.name.split(" · ")[0]}
+        <a href={directionsUrl(null, p.where)} target="_blank" rel="noopener noreferrer"
+          className="mt-0.5 block text-xs font-normal text-great/90 underline-offset-4 hover:underline">
+          Directions →
+        </a>
+      </>
+    ) : "–"],
+    ["Chance", <Term key="t" k="chance">Chance</Term>, <><Score value={p.score} />{p.chance}</>],
+  ].map(([key, label, val]) => (
+    <div key={key as string} className="min-w-0 px-4 py-4 sm:px-5">
+      <dt className="text-xs text-faint">{label}</dt>
+      <dd className="mt-1 text-sm leading-snug font-medium sm:text-base">{val}</dd>
+    </div>
+  ));
+}
+
+const kpAndClouds = (n: { kp: number; cloud: number | null }) => (
+  <span className={SUB}><Term k="kp">Kp</Term> {kp(n.kp)} · clouds {pct(n.cloud)}%</span>
+);
+
+/** Tonight at one spot, as the text either side of the spot picker. */
+function spotTonight(spot: Spot, night: Night): [React.ReactNode, React.ReactNode] {
+  if (night.peak >= 15) {
+    return [
+      <>Best between <b className={B}>{time(night.start)}</b> and <b className={B}>{time(night.end)}</b> at </>,
+      <>. Expected <Term k="kp">Kp</Term> {kp(night.kp)}, clouds {pct(night.cloud)}%.</>,
+    ];
+  }
+  if (night.limit === "clouds") return ["At ", <>, clouds will likely hide the sky tonight ({pct(night.cloud)}%).</>];
+  return ["At ", <>, activity is too low tonight: expected <Term k="kp">Kp</Term> {kp(night.kp)}, this spot needs about Kp {spot.minKp}.</>];
+}
+
+export function Hero({ data }: { data: AuroraData }) {
+  const { now, tonight, bestNow, v, later, target, where } = recommend(data);
   const nextActive = outlookHighlights(data.outlook)[0];
   const alert = ALERT[data.now.alert];
   // The alert is about solar activity; say so when darkness or clouds stand in the way.
@@ -61,23 +101,51 @@ export function Hero({ data }: { data: AuroraData }) {
   ].filter(Boolean);
 
   let detail: React.ReactNode;
+  let cells: React.ReactNode;
   if (v === "now") {
-    detail = <>Auroras are likely right now. Head to <b className="font-medium text-ink">{bestNow.name}</b> and look north.</>;
-  } else if (v === "bright") {
-    detail = <>Oulu nights are too light right now. Aurora season runs from late August to mid-April.</>;
+    detail = <>Auroras are likely right now. Head to <b className={B}>{bestNow.name}</b> and look north.</>;
+    cells = (
+      <Cells when={{ date: day(data.generatedAt), time: `Now – ${data.now.dark ? time(data.now.dark.end) : "dawn"}` }} where={bestNow}
+        score={bestNow.now} chance={data.now.driver === "fmi" && data.now.activity ? (
+          <span className={SUB}><Term k="rIndex">Local activity</Term>: {data.now.activity.level} · clouds {pct(bestNow.cloud)}%</span>
+        ) : kpAndClouds({ kp: data.now.effectiveKp, cloud: bestNow.cloud })} />
+    );
   } else if (tonight && (v === "tonight" || v === "maybe")) {
+    // Tonight's window at each spot; the spot picked in the sentence drives the sentence, the row and "Next nights".
+    const views = data.spots.flatMap((s) => {
+      const n = s.nights.find((x) => x.date === tonight.date);
+      return n ? [{ id: s.id, s, n }] : [];
+    });
+    const text = views.map(({ id, s, n }) => [id, spotTonight(s, n)] as const);
+    // The picker stays outside the switching text, so it keeps focus while you change it.
     detail = (
-      <>Best between <b className="font-medium text-ink">{time(tonight.start)}</b> and <b className="font-medium text-ink">{time(tonight.end)}</b> at{" "}
-        <b className="font-medium text-ink">{where?.name}</b>. Expected <Term k="kp">Kp</Term> {kp(tonight.kp)}, clouds {tonight.cloud === null ? "?" : Math.round(tonight.cloud)}%.</>
+      <>
+        <BySpot views={Object.fromEntries(text.map(([id, [before]]) => [id, before]))} />
+        <SpotSelect />
+        <BySpot views={Object.fromEntries(text.map(([id, [, after]]) => [id, after]))} />
+      </>
+    );
+    cells = (
+      <BySpot views={Object.fromEntries(views.map(({ id, s, n }) => [id,
+        <Cells key={id} when={n.peak >= 15 ? windowOf(n) : null} where={s} score={n.peak} chance={kpAndClouds(n)} />,
+      ]))} />
     );
   } else {
-    const why = tonight?.limit === "clouds" ? "Clouds will cover the sky" : "Solar activity is too low to reach Oulu";
-    detail = (
-      <>{why}.{" "}
-        {later ? <>Better chance <b className="font-medium text-ink">{nightLabel(later.date, now).toLowerCase()}</b>, {time(later.start)}–{time(later.end)}.</>
-          : nextActive ? <>Next active days expected around <b className="font-medium text-ink">{date(nextActive.from)}</b> (Kp {nextActive.kp}).</>
-          : null}
-      </>
+    if (v === "bright") {
+      detail = <>Oulu nights are too light right now. Aurora season runs from late August to mid-April.</>;
+    } else {
+      const why = tonight?.limit === "clouds" ? "Clouds will cover the sky" : "Solar activity is too low to reach Oulu";
+      detail = (
+        <>{why}.{" "}
+          {later ? <>Better chance <b className={B}>{nightLabel(later.date, now).toLowerCase()}</b>, {time(later.start)}–{time(later.end)}.</>
+            : nextActive ? <>Next active days expected around <b className={B}>{date(nextActive.from)}</b> (Kp {nextActive.kp}).</>
+            : null}
+        </>
+      );
+    }
+    const basis = target ?? tonight;
+    cells = (
+      <Cells when={target ? windowOf(target) : null} where={where} score={basis?.peak ?? 0} chance={basis && kpAndClouds(basis)} />
     );
   }
 
@@ -93,29 +161,7 @@ export function Hero({ data }: { data: AuroraData }) {
 
       {target && target !== tonight && <p className="mt-8 mb-2 text-xs text-faint">Next good window</p>}
       <dl className={`${target && target !== tonight ? "" : "mt-8"} grid grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface/70`}>
-        {[
-          ["When", "When", when ? <>{when.date}<span className={sub}>{when.time}</span></> : "–"],
-          ["Where", "Where", where ? (
-            <>
-              {where.name.split(" · ")[0]}
-              <a href={directionsUrl(null, where)} target="_blank" rel="noopener noreferrer"
-                className="mt-0.5 block text-xs font-normal text-great/90 underline-offset-4 hover:underline">
-                Directions →
-              </a>
-            </>
-          ) : "–"],
-          ["Chance", <Term key="t" k="chance">Chance</Term>, <>
-            <Score value={score} />
-            {basis && v === "now" && data.now.driver === "fmi" && data.now.activity ? (
-              <span className={sub}><Term k="rIndex">Local activity</Term>: {data.now.activity.level} · clouds {basis.cloud === null ? "?" : Math.round(basis.cloud)}%</span>
-            ) : basis && <span className={sub}><Term k="kp">Kp</Term> {kp(basis.kp)} · clouds {basis.cloud === null ? "?" : Math.round(basis.cloud)}%</span>}
-          </>],
-        ].map(([key, label, val]) => (
-          <div key={key as string} className="min-w-0 px-4 py-4 sm:px-5">
-            <dt className="text-xs text-faint">{label}</dt>
-            <dd className="mt-1 text-sm leading-snug font-medium sm:text-base">{val}</dd>
-          </div>
-        ))}
+        {cells}
       </dl>
 
       <p className="mt-4 inline-block rounded-2xl border border-line bg-bg px-3 py-1.5 text-xs leading-relaxed text-muted">

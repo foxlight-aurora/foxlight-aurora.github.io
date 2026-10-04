@@ -65,6 +65,13 @@ describe("summarizeNights", () => {
     expect(cloudy[0].limit).toBe("clouds");
     expect(quiet[0].limit).toBe("activity");
   });
+
+  it("judges activity against the spot's own Kp threshold", () => {
+    // Kp 3 under a 40% cloud deck: clouds hold back a dark spot, activity holds back the city centre.
+    const hs = [{ time: "2026-12-10T21:00:00Z", kp: 3, sunAlt: -30, spotId: "x", score: 0, cloud: 40 }];
+    expect(summarizeNights(hs, 2)[0].limit).toBe("clouds");
+    expect(summarizeNights(hs, 4)[0].limit).toBe("activity");
+  });
 });
 
 describe("darkWindow", () => {

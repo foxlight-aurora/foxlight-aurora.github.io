@@ -1,5 +1,5 @@
 import { buildHours, darkWindow, kpAt, summarizeNights, type Hour, type Night } from "./forecast";
-import { kpAlert, OULU, rIndexKp, SPOTS, sunAltitude, visibilityScore } from "./oulu";
+import { darknessFactor, kpAlert, OULU, rIndexKp, SPOTS, sunAltitude, visibilityScore } from "./oulu";
 import { ovationNear, parse27Day, parseFmiSeries, parseKpForecast, parseRIndex, parseRtsw, type Point } from "./parse";
 import { withRetry } from "./retry";
 
@@ -126,14 +126,20 @@ export async function getAuroraData() {
   const hours: Hour[] = buildHours({ from: now, count: 72, kpBins, spots: SPOTS, clouds });
   const nights: Night[] = summarizeNights(hours);
 
-  const spots = SPOTS.map((spot) => ({
-    ...spot,
-    cloud: cloudNow(spot.id),
-    now: visibilityScore({ kp: effectiveKp, minKp: spot.minKp, cloud: cloudNow(spot.id), sunAlt }),
-    // This spot's best window over the next 3 nights.
-    best: summarizeNights(buildHours({ from: now, count: 72, kpBins, spots: [spot], clouds }))
-      .reduce<Night | null>((a, n) => (!a || n.peak > a.peak ? n : a), null),
-  }));
+  const spots = SPOTS.map((spot) => {
+    const spotHours = buildHours({ from: now, count: 72, kpBins, spots: [spot], clouds });
+    const spotNights = summarizeNights(spotHours, spot.minKp);
+    return {
+      ...spot,
+      cloud: cloudNow(spot.id),
+      now: visibilityScore({ kp: effectiveKp, minKp: spot.minKp, cloud: cloudNow(spot.id), sunAlt }),
+      // This spot's best window over the next 3 nights.
+      best: spotNights.reduce<Night | null>((a, n) => (!a || n.peak > a.peak ? n : a), null),
+      nights: spotNights,
+      // Only the hours dark enough to count, as plotted under "Next nights".
+      hours: spotHours.filter((h) => darknessFactor(h.sunAlt) > 0),
+    };
+  });
 
   return {
     generatedAt: now.toISOString(),
