@@ -39,7 +39,7 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
 - **Search engines** — `app/robots.ts`, `app/sitemap.ts` (lastmod = data time), `app/manifest.ts`, a static
   share image (`app/opengraph-image.png`, PNG so GitHub Pages serves it as an image), canonical URL and JSON-LD
   (WebSite, WebPage, FAQPage) in `app/page.tsx`. Site name, title and description live in `lib/site.ts`.
-- **Analytics** — `components/Analytics.tsx` loads Google Analytics (G-PY9306Z2K6) only after a visitor taps
+- **Analytics** — `components/Analytics.tsx` loads Google Analytics (G-8BDX35ERF0) only after a visitor taps
   "Allow" (EU consent rules); declining sends nothing to Google. The choice is kept in `localStorage` and can be changed
   from the footer. Only counted on foxlight-aurora.github.io, and auto-refresh reloads are not counted as page views.
 - **Your location** — place search uses OpenStreetMap Nominatim from the browser; the chosen point is kept only in

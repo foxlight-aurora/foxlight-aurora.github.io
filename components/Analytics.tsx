@@ -7,7 +7,7 @@ import { useEffect, useSyncExternalStore } from "react";
  * "Allow"; declining or ignoring the banner sends nothing. The choice is kept in this browser and can be changed
  * from the footer ("Cookie settings").
  */
-const GA_ID = "G-PY9306Z2K6";
+const GA_ID = "G-8BDX35ERF0";
 const HOST = "foxlight-aurora.github.io"; // don't count local builds and previews
 const KEY = "foxlight:analytics";
 const CHANGE = "foxlight:analytics-change";
