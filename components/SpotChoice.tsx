@@ -1,38 +1,18 @@
 "use client";
 
-import { createContext, useContext, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useState } from "react";
 
 type Option = { id: string; name: string };
 type Choice = { id: string; options: Option[]; choose: (id: string) => void };
 
 const Ctx = createContext<Choice | null>(null);
-// Per tab, so a pick survives the automatic reload on a new build but a new visit starts from the best spot.
-const STORE = "foxlight:spot";
 
-const noSubscribe = () => () => {};
-const readSaved = () => {
-  try {
-    return sessionStorage.getItem(STORE);
-  } catch {
-    return null;
-  }
-};
-
-/** The viewing spot shown in the hero and under "Next nights". Starts at `initial` (the recommended spot). */
+/**
+ * The viewing spot shown in the hero and under "Next nights". Every page load starts at `initial`
+ * (the recommended spot); a pick lasts until the page is reloaded.
+ */
 export function SpotChoiceProvider({ initial, options, children }: { initial: string; options: Option[]; children: React.ReactNode }) {
-  // Read after hydration; the server always renders `initial`.
-  const saved = useSyncExternalStore(noSubscribe, readSaved, () => null);
-  const [picked, setPicked] = useState<string | null>(null);
-  const valid = (id: string | null) => (id && options.some((o) => o.id === id) ? id : null);
-  const id = picked ?? valid(saved) ?? initial;
-
-  const choose = (next: string) => {
-    setPicked(next);
-    try {
-      sessionStorage.setItem(STORE, next);
-    } catch {}
-  };
-
+  const [id, choose] = useState(initial);
   return <Ctx.Provider value={{ id, options, choose }}>{children}</Ctx.Provider>;
 }
 
