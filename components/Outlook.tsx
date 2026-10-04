@@ -40,7 +40,7 @@ export function Outlook({ data }: { data: AuroraData }) {
             <div key={d.date} title={`${date(d.date)} · Kp ${d.kp}`}
               className={`rounded-lg py-2 ${CELL[Math.min(d.kp, 5)]}`}>
               <span className="block text-xs">{Number(d.date.slice(8))}</span>
-              <span className="block font-mono text-[10px] opacity-70">{d.kp}</span>
+              <span className="block font-mono text-[10px] whitespace-nowrap opacity-70">Kp {d.kp}</span>
             </div>
           ))}
         </div>
