@@ -28,20 +28,22 @@ export function BySpot({ views }: { views: Record<string, React.ReactNode> }) {
 }
 
 /**
- * Inline spot picker: the spot's name reads as part of the sentence, with a native select laid over it
- * (keyboard, screen readers and the phone's own picker all work) so it sizes to the chosen name.
+ * Inline spot picker: the spot's name sits in the sentence as a chip with a chevron, so it reads as
+ * something to change. A native select is laid over it (keyboard, screen readers and the phone's own
+ * picker all work) so it sizes to the chosen name.
  */
 export function SpotSelect({ label = "Viewing spot" }: { label?: string }) {
   const { id, options, choose } = useSpotChoice();
   const name = options.find((o) => o.id === id)?.name ?? id;
   return (
-    <span className="relative inline-flex items-baseline rounded-md font-medium whitespace-nowrap text-ink decoration-faint decoration-dashed underline-offset-4 hover:underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-great/60">
+    <span className="group relative inline-flex items-baseline rounded-[0.5em] border border-line bg-surface/80 px-[0.45em] font-medium whitespace-nowrap text-ink transition-colors hover:border-great/50 has-[:focus-visible]:border-great/60 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-great/40">
       {name}
-      <svg viewBox="0 0 12 12" className="ml-1 size-[0.7em] self-center text-muted" aria-hidden>
-        <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 12 12" className="ml-[0.3em] size-[0.75em] self-center text-great/90 transition-transform group-hover:translate-y-px" aria-hidden>
+        <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <select
         aria-label={label}
+        title="Change spot"
         value={id}
         onChange={(e) => choose(e.target.value)}
         className="absolute inset-0 w-full cursor-pointer appearance-none opacity-0"
