@@ -1,5 +1,6 @@
-// Visibility model tuned for Oulu (65.0°N, ~62° geomagnetic).
-// Kp 2+ → auroras likely low in the north from dark spots; Kp 4+ → visible from the city centre.
+// Visibility model tuned for Oulu (65.0°N, ~62° geomagnetic), calibrated to FMI's statistics: on dark, cloudless
+// nights auroras are seen around Oulu on roughly 25% of nights (75% at Kilpisjärvi, ~50% in central Lapland).
+// Dark spots have an even chance from about Kp 3+, semi-dark shores from 4+, the city centre from 5+.
 
 export const OULU = { lat: 65.01, lon: 25.47, tz: "Europe/Helsinki" } as const;
 /** Default starting point for distances: Oulu Market Square. */
@@ -10,33 +11,45 @@ export type Spot = {
   name: string;
   lat: number;
   lon: number;
-  /** Kp needed for a good chance here (lower = darker sky). */
+  /** Kp for about an even chance here (lower = darker sky); see auroraFactor. */
   minKp: number;
   note: string;
 };
 
 export const SPOTS: Spot[] = [
-  { id: "sanginjoki", name: "Sanginjoki", lat: 64.965, lon: 25.879, minKp: 2, note: "Dark countryside east of the city. Fields with open northern sky." },
-  { id: "virpiniemi", name: "Virpiniemi", lat: 65.134, lon: 25.251, minKp: 2, note: "Dark seaside north of the city — wide view over the bay." },
-  { id: "hailuoto", name: "Hailuoto · Marjaniemi", lat: 65.04, lon: 24.562, minKp: 2, note: "The darkest sky near Oulu. Free ferry from Oulunsalo (~1 h)." },
-  { id: "letonniemi", name: "Hietasaari · Letonniemi", lat: 65.06, lon: 25.399, minKp: 3, note: "Northern tip of Hietasaari dunes. Sea horizon to the north, little light." },
-  { id: "nallikari", name: "Nallikari beach", lat: 65.03, lon: 25.412, minKp: 3, note: "Easy to reach by bus or bike. Walk onto the beach, away from the lamps." },
-  { id: "kuusisaari", name: "Kuusisaari", lat: 65.022, lon: 25.459, minKp: 4, note: "City-centre island park. Works only for strong displays." },
+  { id: "sanginjoki", name: "Sanginjoki", lat: 64.965, lon: 25.879, minKp: 3, note: "Dark countryside east of the city. Fields with open northern sky." },
+  { id: "virpiniemi", name: "Virpiniemi", lat: 65.134, lon: 25.251, minKp: 3, note: "Dark seaside north of the city — wide view over the bay." },
+  { id: "hailuoto", name: "Hailuoto · Marjaniemi", lat: 65.04, lon: 24.562, minKp: 3, note: "The darkest sky near Oulu. Free ferry from Oulunsalo (~1 h)." },
+  { id: "letonniemi", name: "Hietasaari · Letonniemi", lat: 65.06, lon: 25.399, minKp: 4, note: "Northern tip of Hietasaari dunes. Sea horizon to the north, little light." },
+  { id: "nallikari", name: "Nallikari beach", lat: 65.03, lon: 25.412, minKp: 4, note: "Easy to reach by bus or bike. Walk onto the beach, away from the lamps." },
+  { id: "kuusisaari", name: "Kuusisaari", lat: 65.022, lon: 25.459, minKp: 5, note: "City-centre island park. Works only for strong displays." },
 ];
+
+/** The Kp at which a spot's chance is even: just above its minKp, so "Kp 3+" (3.33, Kp's next step) is past it. */
+export const evenChanceKp = (minKp: number) => minKp + 0.25;
+/** Kp for an even chance at the darkest spots, and in the city centre. */
+export const DARK_KP = evenChanceKp(Math.min(...SPOTS.map((s) => s.minKp)));
+export const CITY_KP = evenChanceKp(Math.max(...SPOTS.map((s) => s.minKp)));
 
 export type KpAlert = "quiet" | "dark-sky" | "city";
 
+/** Even chance in the city centre, at dark spots, or less. */
 export function kpAlert(kp: number): KpAlert {
-  if (kp >= 4) return "city";
-  if (kp >= 2) return "dark-sky";
+  if (kp >= CITY_KP) return "city";
+  if (kp >= DARK_KP) return "dark-sky";
   return "quiet";
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
-/** 0.75 at the spot's minimum Kp, 1 half a step above, 0 at 1.5 below. */
+/**
+ * Chance (0–1) that auroras show at a spot for a given Kp, before clouds and darkness: an S-curve, even at
+ * evenChanceKp, ~12% one Kp below, ~88% one Kp above. Checked against GFZ's Kp record for Sep 2014 – Apr 2025
+ * (a full solar cycle): on clear dark nights dark spots average ~1 in 3, semi-dark shores ~1 in 6, which brackets
+ * FMI's ~25% for the Oulu area. FMI's R-index lines anchor the same points (see rIndexKp).
+ */
 export function auroraFactor(kp: number, minKp: number): number {
-  return clamp01((kp - minKp + 1.5) / 2);
+  return 1 / (1 + Math.exp(-(kp - evenChanceKp(minKp)) / 0.5));
 }
 
 /** 0 above -6° (too bright), 1 below -12° (dark), linear in between. */
@@ -61,12 +74,13 @@ export function scoreLabel(score: number): { label: string; tone: Tone } {
 /**
  * FMI R-index → Kp-equivalent for the visibility model. FMI's station thresholds: yellow = 50% chance of
  * weak auroras, red = 50% chance of strong auroras. Weak auroras show at dark spots but not through city lights, so
- * yellow maps to Kp 3 (dark spots certain, semi-dark likely, city unlikely); red maps to Kp 5 (capped). Linear between.
+ * yellow maps to an even chance at dark spots and red to an even chance in the city centre. Linear between, capped
+ * at red: FMI gives no calibration beyond it.
  */
 export function rIndexKp(r: number, yellow: number, red: number): number {
-  if (r >= red) return 5;
-  if (r >= yellow) return 3 + (2 * (r - yellow)) / (red - yellow);
-  return (3 * Math.max(0, r)) / yellow;
+  if (r >= red) return CITY_KP;
+  if (r >= yellow) return DARK_KP + ((CITY_KP - DARK_KP) * (r - yellow)) / (red - yellow);
+  return (DARK_KP * Math.max(0, r)) / yellow;
 }
 
 const RAD = Math.PI / 180;

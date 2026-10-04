@@ -77,17 +77,21 @@ export function Advanced({ data }: { data: AuroraData }) {
           <div className="space-y-2 text-sm leading-relaxed text-muted">
             <p className="text-ink">How the chance is calculated</p>
             <p>
-              Each spot has a minimum Kp: 2 for dark sky, 3 for semi-dark shores, 4 for city lights. Oulu sits at ~62°
-              geomagnetic latitude, where the auroral oval&apos;s southern edge appears low in the north from about Kp 2.
+              Each spot has a Kp for an even chance: 3+ for dark sky, 4+ for semi-dark shores, 5+ for city lights. Oulu
+              sits at ~62° geomagnetic latitude, near the auroral oval&apos;s southern edge; FMI counts auroras here on
+              roughly 1 in 4 clear, dark nights.
             </p>
             <p className="font-mono text-xs text-faint">
-              chance = 100 × activity(Kp − minKp) × (1 − clouds) × darkness(sun altitude)
+              chance = 100 × activity(Kp) × (1 − clouds) × darkness(sun altitude)
             </p>
             <p>
-              Activity is 0.75 at the spot&apos;s minimum Kp and saturates half a step above. Darkness ramps from 0 at −6° to 1 at
-              −12°. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line ≈ Kp 3,
-              red line ≈ Kp 5), because local substorms show up there minutes after they start — long before the
-              global 3-hour Kp. Live readings older than 30 minutes are never shown as &ldquo;now&rdquo;.
+              Activity is an S-curve: even at the spot&apos;s Kp, ~12% one Kp below, ~88% one above. Checked against
+              every dark night from 2014 to 2025 (a full solar cycle of measured Kp), dark spots average about 1 in 3
+              clear nights, in line with FMI. Darkness ramps from 0 at −6° to 1 at −12°, taken at the middle of each
+              hour. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line = 50%
+              chance of weak auroras ≈ even chance at dark spots; red line = 50% chance of strong ones ≈ even chance in
+              town), because local substorms show up there minutes after they start — long before the global 3-hour
+              Kp. Live readings older than 30 minutes are never shown as &ldquo;now&rdquo;.
             </p>
           </div>
 

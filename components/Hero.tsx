@@ -25,8 +25,8 @@ const HEAD_COLOR: Record<Verdict, string> = {
 };
 
 const ALERT = {
-  city: { text: "Visible from the city centre", tone: "great" },
-  "dark-sky": { text: "High probability at dark spots around Oulu", tone: "good" },
+  city: { text: "Good chance even from the city centre", tone: "great" },
+  "dark-sky": { text: "Good chance at dark spots around Oulu", tone: "good" },
   quiet: { text: "Quiet — auroras rarely reach Oulu at this level", tone: "low" },
 } as const;
 

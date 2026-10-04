@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { day, hour, kp, time } from "@/lib/format";
+import { CITY_KP, DARK_KP } from "@/lib/oulu";
 import type { KpBin } from "@/lib/parse";
 import { Term } from "./Term";
 
 const H = 9; // Kp scale
 const end = (b: KpBin) => new Date(Date.parse(b.start) + 3 * 3600000).toISOString();
-const fill = (v: number) => (v >= 4 ? "fill-great" : v >= 2 ? "fill-good" : "fill-low");
+const fill = (v: number) => (v >= CITY_KP ? "fill-great" : v >= DARK_KP ? "fill-good" : "fill-low");
 
 /** Kp bars, one per 3-hour block. Hover or tap a bar to read its time window. */
 export function KpChart({ bins, now }: { bins: KpBin[]; now: number }) {
@@ -27,7 +28,7 @@ export function KpChart({ bins, now }: { bins: KpBin[]; now: number }) {
 
       <div className="relative h-36" onPointerLeave={(e) => e.pointerType === "mouse" && setActive(null)}>
         <svg viewBox={`0 0 ${bins.length} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden>
-          {[2, 4].map((t) => (
+          {[DARK_KP, CITY_KP].map((t) => (
             <line key={t} x1={0} x2={bins.length} y1={H - t} y2={H - t} className="stroke-ink/40" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
           ))}
           {bins.map((b, i) => (
@@ -39,8 +40,8 @@ export function KpChart({ bins, now }: { bins: KpBin[]; now: number }) {
             <line x1={nowIdx} x2={nowIdx} y1={0} y2={H} className="stroke-ink" vectorEffect="non-scaling-stroke" />
           )}
         </svg>
-        <span className="pointer-events-none absolute left-1 text-[10px] text-muted" style={{ top: `calc(${((H - 4) / H) * 100}% - 15px)` }}>Kp 4 · city</span>
-        <span className="pointer-events-none absolute left-1 text-[10px] text-muted" style={{ top: `calc(${((H - 2) / H) * 100}% - 15px)` }}>Kp 2 · dark spots</span>
+        <span className="pointer-events-none absolute left-1 text-[10px] text-muted" style={{ top: `calc(${((H - CITY_KP) / H) * 100}% - 15px)` }}>Kp 5+ · city</span>
+        <span className="pointer-events-none absolute left-1 text-[10px] text-muted" style={{ top: `calc(${((H - DARK_KP) / H) * 100}% - 15px)` }}>Kp 3+ · dark spots</span>
 
         {/* Hit areas: one per bar, full height, so thin bars are easy to hover or tap. */}
         <div className="absolute inset-0 flex">

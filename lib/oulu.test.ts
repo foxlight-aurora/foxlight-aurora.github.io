@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   auroraFactor,
+  CITY_KP,
+  DARK_KP,
   darknessFactor,
   kpAlert,
   rIndexKp,
@@ -27,21 +29,29 @@ describe("sunAltitude (Oulu 65.01°N)", () => {
 });
 
 describe("kpAlert — Oulu thresholds", () => {
-  it("is quiet below Kp 2", () => expect(kpAlert(1.67)).toBe("quiet"));
-  it("flags dark spots at Kp 2+", () => {
-    expect(kpAlert(2)).toBe("dark-sky");
-    expect(kpAlert(3.67)).toBe("dark-sky");
+  it("is quiet below Kp 3+", () => {
+    expect(kpAlert(2.33)).toBe("quiet");
+    expect(kpAlert(3)).toBe("quiet");
   });
-  it("flags the city centre at Kp 4+", () => {
-    expect(kpAlert(4)).toBe("city");
+  it("flags dark spots from Kp 3+ (even chance there)", () => {
+    expect(kpAlert(3.33)).toBe("dark-sky");
+    expect(kpAlert(5)).toBe("dark-sky");
+  });
+  it("flags the city centre from Kp 5+", () => {
+    expect(kpAlert(5.33)).toBe("city");
     expect(kpAlert(7)).toBe("city");
   });
 });
 
-describe("auroraFactor", () => {
-  it("is high (0.75) exactly at a spot's minimum Kp", () => expect(auroraFactor(2, 2)).toBe(0.75));
-  it("saturates at 1 half a Kp above", () => expect(auroraFactor(4.5, 4)).toBe(1));
-  it("is 0 well below the minimum", () => expect(auroraFactor(0.33, 2)).toBe(0));
+describe("auroraFactor — calibrated to FMI (~25% of clear dark nights around Oulu)", () => {
+  it("gives an even chance just above the spot's Kp", () => expect(auroraFactor(3.25, 3)).toBeCloseTo(0.5, 5));
+  it("rises over about two Kp steps", () => {
+    expect(auroraFactor(2.25, 3)).toBeCloseTo(0.12, 2);
+    expect(auroraFactor(4.25, 3)).toBeCloseTo(0.88, 2);
+  });
+  it("keeps quiet Kp 2 nights unlikely even at dark spots", () => expect(auroraFactor(2.33, 3)).toBeLessThan(0.15));
+  it("is near-certain at dark spots in a storm", () => expect(auroraFactor(5.67, 3)).toBeGreaterThan(0.99));
+  it("is ~0 for the city on a quiet night", () => expect(auroraFactor(1, 5)).toBeLessThan(0.001));
 });
 
 describe("darknessFactor", () => {
@@ -55,15 +65,18 @@ describe("darknessFactor", () => {
 
 describe("visibilityScore", () => {
   it("is 0 when fully overcast", () =>
-    expect(visibilityScore({ kp: 6, minKp: 2, cloud: 100, sunAlt: -30 })).toBe(0));
+    expect(visibilityScore({ kp: 6, minKp: 3, cloud: 100, sunAlt: -30 })).toBe(0));
   it("is 0 in daylight", () =>
-    expect(visibilityScore({ kp: 6, minKp: 2, cloud: 0, sunAlt: 5 })).toBe(0));
+    expect(visibilityScore({ kp: 6, minKp: 3, cloud: 0, sunAlt: 5 })).toBe(0));
   it("is 100 for a strong storm, clear dark sky", () =>
-    expect(visibilityScore({ kp: 6, minKp: 2, cloud: 0, sunAlt: -30 })).toBe(100));
+    expect(visibilityScore({ kp: 6, minKp: 3, cloud: 0, sunAlt: -30 })).toBe(100));
   it("combines factors multiplicatively", () =>
-    expect(visibilityScore({ kp: 2, minKp: 2, cloud: 40, sunAlt: -30 })).toBe(45));
+    expect(visibilityScore({ kp: 3.25, minKp: 3, cloud: 40, sunAlt: -30 })).toBe(30));
   it("treats unknown cloud cover as 50%", () =>
-    expect(visibilityScore({ kp: 6, minKp: 2, cloud: null, sunAlt: -30 })).toBe(50));
+    expect(visibilityScore({ kp: 6, minKp: 3, cloud: null, sunAlt: -30 })).toBe(50));
+  // 4 Oct 2026, 21–22 at Nallikari (semi-dark): Kp 5.67 and a substorm; very good auroras were seen there.
+  it("rates a Kp 5.67 storm night at Nallikari as great", () =>
+    expect(scoreLabel(visibilityScore({ kp: 5.67, minKp: 4, cloud: 0, sunAlt: -18 })).label).toBe("Great"));
 });
 
 describe("scoreLabel", () => {
@@ -78,13 +91,17 @@ describe("scoreLabel", () => {
 describe("rIndexKp — FMI R-index → Kp-equivalent for Oulu", () => {
   // FMI thresholds: yellow = 50% chance of weak auroras, red = 50% chance of strong auroras (Oulujärvi 68 / 200)
   it("is 0 with no activity", () => expect(rIndexKp(0, 68, 200)).toBe(0));
-  it("equals Kp 3 at the yellow threshold (weak auroras: dark spots yes, city lights no)", () =>
-    expect(rIndexKp(68, 68, 200)).toBe(3));
-  it("equals Kp 5 at the red threshold (strong auroras likely → visible everywhere)", () =>
-    expect(rIndexKp(200, 68, 200)).toBe(5));
-  it("interpolates between the thresholds", () => expect(rIndexKp(134, 68, 200)).toBeCloseTo(4, 2));
-  it("scales linearly below yellow", () => expect(rIndexKp(34, 68, 200)).toBeCloseTo(1.5, 2));
-  it("caps at Kp 5 above red", () => expect(rIndexKp(500, 68, 200)).toBe(5));
+  it("gives an even chance at dark spots on the yellow line (50% chance of weak auroras)", () => {
+    expect(rIndexKp(68, 68, 200)).toBe(DARK_KP);
+    expect(auroraFactor(rIndexKp(68, 68, 200), 3)).toBeCloseTo(0.5, 5);
+  });
+  it("gives an even chance in the city on the red line (50% chance of strong auroras)", () => {
+    expect(rIndexKp(200, 68, 200)).toBe(CITY_KP);
+    expect(auroraFactor(rIndexKp(200, 68, 200), 5)).toBeCloseTo(0.5, 5);
+  });
+  it("interpolates between the thresholds", () => expect(rIndexKp(134, 68, 200)).toBeCloseTo((DARK_KP + CITY_KP) / 2, 2));
+  it("scales linearly below yellow", () => expect(rIndexKp(34, 68, 200)).toBeCloseTo(DARK_KP / 2, 2));
+  it("caps at the red line's value above it", () => expect(rIndexKp(500, 68, 200)).toBe(CITY_KP));
 });
 
 describe("distanceKm", () => {
@@ -95,10 +112,10 @@ describe("distanceKm", () => {
 
 describe("rankSpots", () => {
   const spots = [
-    { id: "far-dark", lat: 65.04, lon: 24.562, minKp: 2, best: { peak: 60 } },
-    { id: "near-city", lat: 65.022, lon: 25.459, minKp: 4, best: { peak: 30 } },
-    { id: "mid-dark", lat: 64.965, lon: 25.879, minKp: 2, best: { peak: 60 } },
-    { id: "none", lat: 65.03, lon: 25.412, minKp: 3, best: null },
+    { id: "far-dark", lat: 65.04, lon: 24.562, minKp: 3, best: { peak: 60 } },
+    { id: "near-city", lat: 65.022, lon: 25.459, minKp: 5, best: { peak: 30 } },
+    { id: "mid-dark", lat: 64.965, lon: 25.879, minKp: 3, best: { peak: 60 } },
+    { id: "none", lat: 65.03, lon: 25.412, minKp: 4, best: null },
   ];
 
   it("adds rounded distances from the chosen origin", () => {

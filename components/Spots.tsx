@@ -9,7 +9,7 @@ import { Term } from "./Term";
 
 type Origin = { name: string; lat: number; lon: number };
 
-const SKY: Record<number, string> = { 2: "Dark sky · Kp 2+", 3: "Semi-dark · Kp 3+", 4: "City lights · Kp 4+" };
+const SKY: Record<number, string> = { 3: "Dark sky · Kp 3+", 4: "Semi-dark · Kp 4+", 5: "City lights · Kp 5+" };
 const STORE = "foxlight:origin";
 
 async function geocode(q: string): Promise<Origin | null> {

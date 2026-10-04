@@ -1,9 +1,12 @@
 import type { AuroraData } from "@/lib/data";
 import { kp, time, TONE } from "@/lib/format";
-import type { Tone } from "@/lib/oulu";
+import { kpAlert, type KpAlert, type Tone } from "@/lib/oulu";
 import { Card, Section } from "./ui";
 
 type Metric = { label: string; value: string; unit?: string; tone: Tone; status: string; meaning: string };
+
+const KP_TONE: Record<KpAlert, Tone> = { city: "great", "dark-sky": "good", quiet: "low" };
+const KP_STATUS: Record<KpAlert, string> = { city: "Strong for Oulu", "dark-sky": "Good for dark spots", quiet: "Quiet for Oulu" };
 
 const LEVEL = { none: ["None", "low", "No auroral activity"], medium: ["Medium", "good", "Auroras likely (weak)"], high: ["High", "great", "Strong auroras likely"] } as const;
 
@@ -17,9 +20,9 @@ export function Metrics({ data }: { data: AuroraData }) {
       label: "Kp index",
       value: kp(n.kp),
       unit: "/ 9",
-      tone: (n.kp ?? 0) >= 4 ? "great" : (n.kp ?? 0) >= 2 ? "good" : "low",
-      status: (n.kp ?? 0) >= 4 ? "Strong for Oulu" : (n.kp ?? 0) >= 2 ? "Enough for dark spots" : "Too quiet",
-      meaning: "Global aurora activity on a 0–9 scale; higher means auroras reach further south. Oulu needs ~2 at dark spots, 4+ in town.",
+      tone: KP_TONE[kpAlert(n.kp ?? 0)],
+      status: KP_STATUS[kpAlert(n.kp ?? 0)],
+      meaning: "Global aurora activity on a 0–9 scale; higher means auroras reach further south. Around Oulu: an even chance at dark spots from ~3, in town from ~5.",
     },
     {
       label: "Clouds over Oulu",

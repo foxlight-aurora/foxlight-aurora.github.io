@@ -27,7 +27,7 @@ export function Outlook({ data }: { data: AuroraData }) {
               </span>
             ))}. Long-range outlooks follow the Sun&apos;s 27-day rotation, so treat them as hints and check clouds on the day.</>
           ) : (
-            <>No stormy days expected in the next four weeks. Kp 2–3 nights can still deliver from dark spots.</>
+            <>No stormy days expected in the next four weeks. Kp 3 nights can still deliver from dark spots.</>
           )}
         </p>
 

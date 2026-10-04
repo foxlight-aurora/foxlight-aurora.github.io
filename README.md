@@ -29,12 +29,15 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   them, so an external timer triggers the same workflow on the same pattern (see [Reliable refresh](#reliable-refresh)).
   Open pages check `data.json` and reload when a newer build is live.
 - **Visibility model** — `lib/oulu.ts`:
-  `chance = 100 × activity(Kp − spot.minKp) × (1 − clouds) × darkness(sun altitude)`.
-  Spots need Kp 2 (dark sky), 3 (semi-dark shore) or 4 (city lights). Alerts: Kp 2+ → "High probability at dark spots",
-  Kp 4+ → "Visible from the city centre".
+  `chance = 100 × activity(Kp, spot.minKp) × (1 − clouds) × darkness(sun altitude)`.
+  Activity is a logistic curve, even at `minKp + 0.25` with a 0.5 Kp scale; spots have an even chance from Kp 3+
+  (dark sky), 4+ (semi-dark shore) or 5+ (city lights). Calibrated to FMI's statistic that auroras show on ~25% of
+  clear, dark nights around Oulu: over Sep 2014 – Apr 2025 (GFZ Kp), dark spots average ~34 on clear dark nights,
+  semi-dark ~16. Alerts follow the same points: Kp 3+ → "Good chance at dark spots", 5+ → "even from the city centre".
 - **Nowcast** — Kp is raised by FMI's R-index from Oulujärvi and Ranua (either side of Oulu), FMI's own 5-minute
-  auroral activity index with per-station thresholds (yellow = 50% chance of weak auroras ≈ Kp 3, red = 50% chance
-  of strong auroras ≈ Kp 5). It catches local substorms the global 3-hour Kp misses.
+  auroral activity index with per-station thresholds (yellow = 50% chance of weak auroras → even chance at dark
+  spots, red = 50% chance of strong auroras → even chance in the city). It catches local substorms the global
+  3-hour Kp misses.
 - **Forecast** — `lib/forecast.ts` scores 72 hours per spot, groups them into nights and finds each night's best window.
 - **Search engines** — `app/robots.ts`, `app/sitemap.ts` (lastmod = data time), `app/manifest.ts`, a static
   share image (`app/opengraph-image.png`, PNG so GitHub Pages serves it as an image), canonical URL and JSON-LD

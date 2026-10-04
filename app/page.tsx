@@ -27,7 +27,7 @@ const TIPS = [
 const FAQ = [
   [
     "Can you see the northern lights in Oulu?",
-    "Yes. Oulu is at 65°N, near the edge of the auroral oval, so auroras show on many clear, dark nights between late August and mid-April. A Kp index of about 2 is often enough at dark spots outside the city; from around Kp 4 they can be seen from the city centre.",
+    "Yes. Oulu is at 65°N, near the edge of the auroral oval, and FMI counts auroras on about one in four clear, dark nights here between late August and mid-April. From around Kp 3 there is a fair chance at dark spots outside the city; the city centre usually needs Kp 5.",
   ],
   [
     "When is the best time to see the aurora in Oulu?",

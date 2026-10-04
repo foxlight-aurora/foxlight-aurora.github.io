@@ -140,8 +140,9 @@ describe("getAuroraData", () => {
       serve({ ...healthy(), "r-index/api": () => rIndexFig(134, minAgo(5)) });
       const d = await getAuroraData();
       expect(d.now.kp).toBe(1);
-      expect(d.now.effectiveKp).toBeCloseTo(4, 1);
-      expect(d.now).toMatchObject({ driver: "fmi", alert: "city", activity: { level: "medium" } });
+      // Halfway between yellow and red: between an even chance at dark spots (3.25) and in town (5.25).
+      expect(d.now.effectiveKp).toBeCloseTo(4.25, 1);
+      expect(d.now).toMatchObject({ driver: "fmi", alert: "dark-sky", activity: { level: "medium" } });
     });
     it("ignores a delayed R-index (45 min old)", async () => {
       serve({ ...healthy(), "r-index/api": () => rIndexFig(250, minAgo(45)) });

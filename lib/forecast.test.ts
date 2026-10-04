@@ -18,8 +18,8 @@ describe("kpAt", () => {
 });
 
 const spots: Spot[] = [
-  { id: "city", name: "City", lat: 65.02, lon: 25.46, minKp: 4, note: "" },
-  { id: "dark", name: "Dark", lat: 64.96, lon: 25.88, minKp: 2, note: "" },
+  { id: "city", name: "City", lat: 65.02, lon: 25.46, minKp: 5, note: "" },
+  { id: "dark", name: "Dark", lat: 64.96, lon: 25.88, minKp: 3, note: "" },
 ];
 
 describe("buildHours", () => {
@@ -29,12 +29,13 @@ describe("buildHours", () => {
       count: 2,
       kpBins: bins,
       spots,
-      clouds: { city: [{ time: "2026-12-10T21:00:00Z", value: 0 }], dark: [{ time: "2026-12-10T21:00:00Z", value: 50 }] },
+      clouds: { city: [{ time: "2026-12-10T21:00:00Z", value: 0 }], dark: [{ time: "2026-12-10T21:00:00Z", value: 95 }] },
     });
     expect(hours).toHaveLength(2);
-    expect(hours[0]).toMatchObject({ time: "2026-12-10T21:00:00Z", kp: 4, spotId: "city", score: 75, cloud: 0 });
+    // Kp 4 under a clear sky in town (8) beats Kp 4 behind 95% cloud at the dark spot (4)
+    expect(hours[0]).toMatchObject({ time: "2026-12-10T21:00:00Z", kp: 4, spotId: "city", score: 8, cloud: 0 });
     // second hour has no cloud data → unknown (50%) everywhere, dark spot wins on Kp
-    expect(hours[1]).toMatchObject({ spotId: "dark", score: 50, cloud: null });
+    expect(hours[1]).toMatchObject({ spotId: "dark", score: 41, cloud: null });
   });
 
   it("judges a twilight hour by the sun at its middle, not its start", () => {
@@ -48,7 +49,7 @@ describe("buildHours", () => {
     });
     expect(h.sunAlt).toBeCloseTo(sunAltitude(new Date("2026-10-05T03:30:00Z"), spots[1].lat, spots[1].lon), 5);
     expect(h.sunAlt).toBeGreaterThan(-9);
-    expect(h.score).toBeLessThan(50); // was 85 when judged at 06:00
+    expect(h.score).toBeLessThan(50); // ~82 if judged at 06:00
   });
 });
 
