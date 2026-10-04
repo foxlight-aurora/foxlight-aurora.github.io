@@ -26,9 +26,12 @@ export function buildHours(p: {
     const kp = kpAt(p.kpBins, t);
     if (kp === null) continue;
     const iso = t.toISOString().replace(".000", "");
-    const sunAlt = sunAltitude(t, OULU.lat, OULU.lon);
+    // An hour is shown as a whole (06:00–07:00), and at twilight the sun moves several degrees in it: judge
+    // darkness at the middle of the hour, not its start, and at the spot itself (Hailuoto sees dark minutes later).
+    const mid = new Date(t.getTime() + HOUR / 2);
     let best: Hour | null = null;
     for (const spot of p.spots) {
+      const sunAlt = sunAltitude(mid, spot.lat, spot.lon);
       const cloud = p.clouds[spot.id]?.find((c) => c.time === iso)?.value ?? null;
       const score = visibilityScore({ kp, minKp: spot.minKp, cloud, sunAlt });
       if (!best || score > best.score) best = { time: iso, kp, sunAlt, spotId: spot.id, score, cloud };

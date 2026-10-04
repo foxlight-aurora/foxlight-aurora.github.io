@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHours, darkWindow, kpAt, nightLabel, outlookHighlights, summarizeNights, verdict } from "./forecast";
-import type { Spot } from "./oulu";
+import { sunAltitude, type Spot } from "./oulu";
 
 const bins = [
   { start: "2026-12-10T18:00:00Z", kp: 1, kind: "predicted" as const, scale: null },
@@ -35,6 +35,20 @@ describe("buildHours", () => {
     expect(hours[0]).toMatchObject({ time: "2026-12-10T21:00:00Z", kp: 4, spotId: "city", score: 75, cloud: 0 });
     // second hour has no cloud data → unknown (50%) everywhere, dark spot wins on Kp
     expect(hours[1]).toMatchObject({ spotId: "dark", score: 50, cloud: null });
+  });
+
+  it("judges a twilight hour by the sun at its middle, not its start", () => {
+    // 5 Oct 2026, 06:00–07:00 in Oulu: the sun is at about −11° at 06:00 but −8° at 06:30 and −5° by 07:00.
+    const [h] = buildHours({
+      from: new Date("2026-10-05T03:00:00Z"),
+      count: 1,
+      kpBins: [{ start: "2026-10-05T03:00:00Z", kp: 5, kind: "predicted", scale: null }],
+      spots: [spots[1]],
+      clouds: { dark: [{ time: "2026-10-05T03:00:00Z", value: 0 }] },
+    });
+    expect(h.sunAlt).toBeCloseTo(sunAltitude(new Date("2026-10-05T03:30:00Z"), spots[1].lat, spots[1].lon), 5);
+    expect(h.sunAlt).toBeGreaterThan(-9);
+    expect(h.score).toBeLessThan(50); // was 85 when judged at 06:00
   });
 });
 
