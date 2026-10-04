@@ -55,7 +55,7 @@ const flags = () => window as unknown as Record<string, boolean>;
 function load() {
   if (location.hostname !== HOST) return;
   flags()[disableFlag] = false; // resume if consent was withdrawn and given again without a reload
-  if (window.gtag) return;
+  if (window.gtag) return window.gtag("consent", "update", { analytics_storage: "granted" });
   let auto = false;
   try {
     auto = sessionStorage.getItem(AUTO_RELOAD) === "1";
@@ -67,6 +67,14 @@ function load() {
     // eslint-disable-next-line prefer-rest-params
     window.dataLayer!.push(arguments);
   };
+  // Consent Mode v2: the banner asks about statistics only, so advertising stays off. Without a default, Google
+  // treats every consent type as granted.
+  window.gtag("consent", "default", {
+    analytics_storage: "granted",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
+  });
   window.gtag("js", new Date());
   window.gtag("config", GA_ID, { send_page_view: !auto });
   const s = document.createElement("script");
@@ -77,6 +85,7 @@ function load() {
 
 /** Stop measuring and remove the Analytics cookies after consent is withdrawn. */
 function unload() {
+  window.gtag?.("consent", "update", { analytics_storage: "denied" });
   flags()[disableFlag] = true;
   for (const c of document.cookie.split(";")) {
     const name = c.split("=")[0].trim();

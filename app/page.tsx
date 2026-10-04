@@ -128,12 +128,8 @@ export default function Home() {
           OpenStreetMap and saved only in your browser.
         </p>
         <p className="mt-1">
-          © 2026 Abhishek Singh Sambyal.{" "}
-          <a className="underline underline-offset-4 hover:text-muted" href="https://github.com/foxlight-aurora/foxlight-aurora.github.io">
-            Source code
-          </a>{" "}
-          licensed under the{" "}
-          <a className="underline underline-offset-4 hover:text-muted" href="https://github.com/foxlight-aurora/foxlight-aurora.github.io/blob/main/LICENSE">
+          © 2026 Abhishek Singh Sambyal. Licensed under the{" "}
+          <a className="underline underline-offset-4 hover:text-muted" href="https://www.gnu.org/licenses/gpl-3.0.html">
             GNU GPLv3
           </a>
           .
