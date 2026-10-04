@@ -136,17 +136,21 @@ export function Spots({ spots, dark }: { spots: AuroraData["spots"]; dark: boole
         {msg && <p className="mt-2 text-xs text-maybe" aria-live="polite">{msg}</p>}
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* One spot per row: details on the left, chances on the right (stacked on phones). */}
+      <div className="grid gap-3">
         {ranked.map((s, i) => (
-          <Card key={s.id} className={`flex flex-col p-5 ${i === 0 && mode === "chance" ? "border-great/30" : ""}`}>
-            <div className="flex items-baseline justify-between gap-3">
-              <h3 className="font-medium">{s.name}</h3>
-              <span className="shrink-0 font-mono text-xs text-faint tabular-nums">{s.distanceKm} km</span>
+          <Card key={s.id}
+            className={`flex flex-col p-5 sm:grid sm:grid-cols-[minmax(0,1fr)_22rem] sm:gap-x-6 ${i === 0 && mode === "chance" ? "border-great/30" : ""}`}>
+            <div>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-medium">{s.name}</h3>
+                <span className="shrink-0 font-mono text-xs text-faint tabular-nums">{s.distanceKm} km</span>
+              </div>
+              <p className="mt-1 text-xs text-faint"><Term k="spotKp">{SKY[s.minKp]}</Term></p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">{s.note}</p>
             </div>
-            <p className="mt-1 text-xs text-faint"><Term k="spotKp">{SKY[s.minKp]}</Term></p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">{s.note}</p>
 
-            <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-4 text-xs">
+            <dl className="mt-4 grid grid-cols-3 gap-2 sm:gap-4 border-t border-line pt-4 text-xs sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:self-center sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
               <div>
                 <dt className="text-faint">Now</dt>
                 <dd className="mt-1">{dark ? <Score value={s.now} /> : <span className="text-muted">Daylight</span>}</dd>
@@ -169,7 +173,7 @@ export function Spots({ spots, dark }: { spots: AuroraData["spots"]; dark: boole
             </dl>
 
             <a href={directionsUrl(origin, s)} target="_blank" rel="noopener noreferrer"
-              className="mt-4 self-start text-sm text-great/90 underline-offset-4 hover:underline">
+              className="mt-4 self-start justify-self-start text-sm text-great/90 underline-offset-4 hover:underline sm:col-start-1 sm:row-start-2 sm:mt-3">
               Directions →
             </a>
           </Card>
