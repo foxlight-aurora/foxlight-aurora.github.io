@@ -16,6 +16,8 @@ type Tile = {
   /** Where the reading applies: the whole region, the Oulu area, or the picked spot. */
   scope: string;
   value: React.ReactNode;
+  /** A word before the value, e.g. "until". */
+  prefix?: string;
   unit?: string;
   bar?: Bar;
   icon?: React.ReactNode;
@@ -64,18 +66,17 @@ export function Tiles({ data }: { data: AuroraData }) {
   const cloudTile = (sp: Spot): Tile => ({
     label: "Cloud cover", term: "clouds", scope: short(sp), value: sp.cloud === null ? "–" : Math.round(sp.cloud), unit: "%",
     bar: sp.cloud === null ? undefined : { frac: sp.cloud / 100, tone: sp.cloud < 30 ? "great" : sp.cloud < 70 ? "maybe" : "low" },
-    status: sp.cloud === null ? "Unavailable" : sp.cloud < 30 ? "Mostly clear" : sp.cloud < 70 ? "Partly cloudy" : "Cloudy",
+    status: sp.cloud === null ? "Unavailable" : `${sp.cloud < 30 ? "Mostly clear" : sp.cloud < 70 ? "Partly cloudy" : "Cloudy"} now`,
     tone: sp.cloud === null ? "low" : sp.cloud < 30 ? "great" : sp.cloud < 70 ? "maybe" : "low",
   });
   const darkTile = (sp: Spot): Tile => ({
     label: "Darkness", term: "sunAlt", scope: short(sp),
-    value: sp.dark ? (
-      <span className="flex flex-col gap-1 text-[1.75rem] leading-none sm:text-[2rem]">
-        <span>{sp.sunAlt < -12 ? "Dark now" : time(sp.dark.start)}</span>
-        <span>{time(sp.dark.end)}</span>
-      </span>
-    ) : "–",
-    status: sp.dark ? `${sp.sunAlt < -12 ? "Until dawn" : "Dark from, until"} · sun ${Math.round(sp.sunAlt)}°` : "No dark night now",
+    // Dark now: until when. Not yet: from when (and until when, below).
+    prefix: sp.dark ? (sp.sunAlt < -12 ? "until" : "from") : undefined,
+    value: sp.dark ? time(sp.sunAlt < -12 ? sp.dark.end : sp.dark.start) : "–",
+    status: sp.dark
+      ? `${sp.sunAlt < -12 ? "Dark now" : `Dark until ${time(sp.dark.end)}`} · sun ${Math.round(sp.sunAlt)}°`
+      : "No dark night now",
     tone: sp.sunAlt < -12 ? "great" : sp.sunAlt < -6 ? "maybe" : "low",
   });
   const perSpot = { clouds: cloudTile, darkness: darkTile };
@@ -133,12 +134,13 @@ function TileView({ t }: { t: Tile }) {
       <div className="mt-3 flex items-center gap-3">
         {t.icon}
         <p className="flex items-baseline gap-1.5 font-display leading-none font-bold tabular-nums">
+          {t.prefix && <span className="text-lg text-muted sm:text-xl">{t.prefix}</span>}
           <span className="text-[2.5rem] sm:text-5xl">{t.value}</span>
           {t.unit && <span className="text-lg text-muted sm:text-xl">{t.unit}</span>}
         </p>
       </div>
       {t.bar && <Gauge {...t.bar} />}
-      <p className={`mt-auto pt-3 text-sm leading-snug ${t.tone === "low" ? "text-muted" : TONE[t.tone].text}`}>{t.status}</p>
+      <p className={`mt-3 text-sm leading-snug ${t.tone === "low" ? "text-muted" : TONE[t.tone].text}`}>{t.status}</p>
     </div>
   );
 }

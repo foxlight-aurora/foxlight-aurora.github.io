@@ -24,7 +24,7 @@ export function Nights({ data }: { data: AuroraData }) {
         .filter((h) => nightOf(h.time) === n.date && h.sunAlt < -6)
         .map(({ time, score, kp, cloud }) => ({ time, score, kp, cloud })),
     }));
-    return [s.id, nights.some((n) => n.hours.length) ? <NightsChart key={s.id} nights={nights} /> : null] as const;
+    return [s.id, nights.some((n) => n.hours.length) ? <NightsChart key={s.id} nights={nights} now={data.generatedAt} /> : null] as const;
   });
   if (!views.some(([, v]) => v)) return null;
 

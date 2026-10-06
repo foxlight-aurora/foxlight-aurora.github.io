@@ -197,7 +197,7 @@ export function Spots({ spots, dark }: { spots: Omit<AuroraData["spots"][number]
           );
         })}
       </div>
-      <p className="mt-3 font-mono text-xs text-faint">
+      <p className="mt-3 text-xs text-faint">
         Place search by OpenStreetMap. Your starting point is only kept in this browser.
       </p>
     </Section>

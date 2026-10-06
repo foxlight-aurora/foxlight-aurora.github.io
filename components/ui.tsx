@@ -8,7 +8,7 @@ export function Section(props: { id: string; title: string; hint?: React.ReactNo
         <h2 id={`${props.id}-h`} className="font-display text-4xl leading-none font-extrabold tracking-tight uppercase sm:text-5xl">
           {props.title}
         </h2>
-        {props.hint && <p className="font-mono text-xs text-muted">{props.hint}</p>}
+        {props.hint && <p className="text-sm text-muted">{props.hint}</p>}
       </div>
       {props.children}
     </section>

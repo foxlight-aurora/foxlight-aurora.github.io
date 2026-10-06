@@ -18,6 +18,7 @@ export type NightView = {
 };
 
 const GAP = 1.5; // hour-widths between nights
+const MIN = 5; // a night already under way keeps at least this width, so its labels fit
 const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
 
 function summary(n: NightView) {
@@ -30,7 +31,7 @@ function summary(n: NightView) {
  * The next nights as one line-and-area chart of hourly chance (dark hours only, nights side by side), with cloud cover
  * as bars underneath. Hover, tap or arrow through the hours to read chance, Kp and clouds.
  */
-export function NightsChart({ nights }: { nights: NightView[] }) {
+export function NightsChart({ nights, now }: { nights: NightView[]; now: string }) {
   const [picked, setPicked] = useState<number | null>(null);
 
   // Lay every dark hour on one x axis, nights separated by a gap.
@@ -40,6 +41,8 @@ export function NightsChart({ nights }: { nights: NightView[] }) {
   nights.forEach((n, k) => {
     if (k > 0) x += GAP;
     const from = x;
+    // The hours already gone are blank space at the start of the night.
+    x += Math.max(0, MIN - n.hours.length);
     n.hours.forEach((h) => points.push({ x: x++ + 0.5, h, night: k }));
     spans.push({ from, to: x });
   });
@@ -54,7 +57,7 @@ export function NightsChart({ nights }: { nights: NightView[] }) {
 
   return (
     <div>
-      <p className="min-h-6 font-mono text-sm text-muted" aria-live="polite">
+      <p className={`min-h-6 text-sm text-muted ${sel ? "font-mono" : ""}`} aria-live="polite">
         {sel ? (
           <>
             <span className="text-ink">{nights[sel.night].label} {time(sel.h.time)}</span>
@@ -71,14 +74,16 @@ export function NightsChart({ nights }: { nights: NightView[] }) {
         <div className="relative h-44 sm:h-56">
           {[0, 25, 50, 75, 100].map((g) => (
             <span key={g} className="absolute inset-x-0 border-t border-line" style={{ top: `${100 - g}%` }} aria-hidden>
-              <span className="absolute -top-2 -left-9 w-8 text-right font-mono text-[0.7rem] leading-none text-faint sm:-left-11 sm:w-10">{g}%</span>
+              <span className="absolute -top-2 -left-9 w-8 text-right font-mono text-[0.7rem] leading-none text-faint sm:-left-11 sm:w-10">{g}</span>
             </span>
           ))}
           <svg viewBox={`0 0 ${W} 100`} preserveAspectRatio="none" className="chart-reveal absolute inset-0 h-full w-full overflow-visible" aria-hidden>
             <defs>
               <linearGradient id="chance-fill" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0" stopColor="var(--color-great)" stopOpacity="0.38" />
-                <stop offset="1" stopColor="var(--color-great)" stopOpacity="0.02" />
+                {/* The curtain's own light: mint at the edge fading through violet. */}
+                <stop offset="0" stopColor="var(--color-great)" stopOpacity="0.4" />
+                <stop offset="0.65" stopColor="rgb(139 92 246)" stopOpacity="0.12" />
+                <stop offset="1" stopColor="rgb(139 92 246)" stopOpacity="0" />
               </linearGradient>
             </defs>
             {spans.map((s, k) => {
@@ -123,7 +128,7 @@ export function NightsChart({ nights }: { nights: NightView[] }) {
             const first = i === 0 || points[i - 1].night !== p.night;
             return (first || Number(hour(p.h.time)) % 3 === 0) && (
               <span key={p.h.time} className={`absolute -translate-x-1/2 ${first ? "" : "hidden sm:block"}`} style={{ left: `${(p.x / W) * 100}%` }}>
-                {hour(p.h.time)}
+                {i === 0 && Date.parse(p.h.time) <= Date.parse(now) ? <span className="text-ink">Now</span> : hour(p.h.time)}
               </span>
             );
           })}

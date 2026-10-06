@@ -27,7 +27,7 @@ function Spark({ pts, name, label, unit, zero }: { pts: Point[]; name: string; l
         <polyline fill="none" className="stroke-great" strokeWidth={1.5} vectorEffect="non-scaling-stroke"
           points={pts.map((p) => `${x(p.time).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ")} />
       </svg>
-      <p className="mt-1 flex justify-between font-mono text-[10px] text-faint">
+      <p className="mt-1 flex justify-between font-mono text-[0.7rem] text-faint">
         <span>{time(pts[0].time)}</span><span>{time(pts.at(-1)!.time)}</span>
       </p>
     </div>

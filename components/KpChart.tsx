@@ -40,8 +40,8 @@ export function KpChart({ bins, now }: { bins: KpBin[]; now: number }) {
             <line x1={nowIdx} x2={nowIdx} y1={0} y2={H} className="stroke-ink" vectorEffect="non-scaling-stroke" />
           )}
         </svg>
-        <span className="pointer-events-none absolute left-1 text-[10px] text-muted" style={{ top: `calc(${((H - CITY_KP) / H) * 100}% - 15px)` }}>Kp 5+ · city</span>
-        <span className="pointer-events-none absolute left-1 text-[10px] text-muted" style={{ top: `calc(${((H - DARK_KP) / H) * 100}% - 15px)` }}>Kp 3+ · dark spots</span>
+        <span className="pointer-events-none absolute left-1 text-[0.7rem] text-muted" style={{ top: `calc(${((H - CITY_KP) / H) * 100}% - 15px)` }}>Kp 5+ · city</span>
+        <span className="pointer-events-none absolute left-1 text-[0.7rem] text-muted" style={{ top: `calc(${((H - DARK_KP) / H) * 100}% - 15px)` }}>Kp 3+ · dark spots</span>
 
         {/* Hit areas: one per bar, full height, so thin bars are easy to hover or tap. */}
         <div className="absolute inset-0 flex">
@@ -53,12 +53,12 @@ export function KpChart({ bins, now }: { bins: KpBin[]; now: number }) {
         </div>
       </div>
 
-      <div className="mt-1.5 flex font-mono text-[10px] text-faint" aria-hidden>
+      <div className="mt-1.5 flex font-mono text-[0.7rem] text-faint" aria-hidden>
         {bins.map((b, i) => (
           <span key={b.start} className="flex-1 text-center">{i % 2 === 0 ? hour(b.start) : ""}</span>
         ))}
       </div>
-      <div className="mt-1 flex text-[10px] text-muted" aria-hidden>
+      <div className="mt-1 flex text-[0.7rem] text-muted" aria-hidden>
         {bins.map((b, i) => (
           <span key={b.start} className="relative flex-1">
             {(i === 0 || day(b.start) !== day(bins[i - 1].start)) && (

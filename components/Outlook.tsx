@@ -20,9 +20,8 @@ export function Outlook({ data }: { data: AuroraData }) {
     <Section id="outlook" title="Coming weeks" hint={<><Term k="outlook">NOAA 27-day outlook</Term> · max <Term k="kp">Kp</Term> per day</>}>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div className="rounded-2xl border border-rule bg-tile p-5 sm:p-6">
-          <p className={LABEL}>Mark your calendar</p>
           {highlights.length ? (
-            <ul className="mt-4 divide-y divide-rule">
+            <ul className="-mt-3 divide-y divide-rule">
               {highlights.map((h) => (
                 <li key={h.from} className="flex items-baseline justify-between gap-4 py-3">
                   <span className="font-display text-2xl leading-none font-bold tracking-wide uppercase">
@@ -33,7 +32,7 @@ export function Outlook({ data }: { data: AuroraData }) {
               ))}
             </ul>
           ) : (
-            <p className="mt-4 font-display text-2xl leading-tight font-bold tracking-wide uppercase">No stormy days expected</p>
+            <p className="font-display text-2xl leading-tight font-bold tracking-wide uppercase">No stormy days expected</p>
           )}
           <p className="mt-4 text-sm leading-relaxed text-muted">
             {highlights.length
@@ -51,7 +50,7 @@ export function Outlook({ data }: { data: AuroraData }) {
             {days.map((d) => (
               <div key={d.date} title={`${date(d.date)} · Kp ${d.kp}`} className={`rounded-lg py-2 ${CELL[Math.min(d.kp, 5)]}`}>
                 <span className="block font-display text-xl leading-none font-bold tabular-nums sm:text-2xl">{Number(d.date.slice(8))}</span>
-                <span className="mt-1 block font-mono text-[10px] whitespace-nowrap opacity-80">Kp {d.kp}</span>
+                <span className="mt-1 block font-mono text-[0.7rem] whitespace-nowrap">Kp {d.kp}</span>
               </div>
             ))}
           </div>

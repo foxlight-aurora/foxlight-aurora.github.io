@@ -123,9 +123,9 @@ export default function Home() {
               whose tail sweeps sparks from the snow into the sky.
             </p>
           </div>
-          <div className="space-y-2 font-mono text-xs leading-relaxed text-faint">
+          <div className="space-y-2 text-xs leading-relaxed text-faint">
             <p>
-              Updated <span className="text-muted">{day(data.generatedAt)} {time(data.generatedAt)}</span> (Oulu time) · refreshed several times an hour.
+              Updated <span className="font-mono text-muted">{day(data.generatedAt)} {time(data.generatedAt)}</span> (Oulu time) · refreshed several times an hour.
             </p>
             <p>
               Data:{" "}

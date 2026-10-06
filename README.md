@@ -33,7 +33,7 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   Activity is a logistic curve, even at `minKp + 0.25` with a 0.5 Kp scale; spots have an even chance from Kp 3+
   (dark sky), 4+ (semi-dark shore) or 5+ (city lights). Calibrated to FMI's statistic that auroras show on ~25% of
   clear, dark nights around Oulu: over Sep 2014 – Apr 2025 (GFZ Kp), dark spots average ~34 on clear dark nights,
-  semi-dark ~16. Alerts follow the same points: Kp 3+ → "Good chance at dark spots", 5+ → "even from the city centre".
+  semi-dark ~16. Alerts follow the same points: Kp 3+ → "Activity reaches dark spots", 5+ → "reaches the city centre".
 - **Nowcast** — Kp is raised by FMI's R-index from Oulujärvi and Ranua (either side of Oulu), FMI's own 5-minute
   auroral activity index with per-station thresholds (yellow = 50% chance of weak auroras → even chance at dark
   spots, red = 50% chance of strong auroras → even chance in the city). It catches local substorms the global

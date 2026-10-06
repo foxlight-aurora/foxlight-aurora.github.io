@@ -17,12 +17,10 @@ const TITLE: Record<Verdict, string> = {
   bright: "Too bright for auroras",
 };
 
-const LABEL: Record<Verdict, string> = { now: "Right now", tonight: "Tonight", maybe: "Tonight", unlikely: "Tonight", bright: "Tonight" };
-
 const ALERT = {
-  city: { text: "Good chance even from the city centre", tone: "great" },
-  "dark-sky": { text: "Good chance at dark spots around Oulu", tone: "good" },
-  quiet: { text: "Quiet — auroras rarely reach Oulu at this level", tone: "low" },
+  city: { text: "Activity reaches the city centre", tone: "great" },
+  "dark-sky": { text: "Activity reaches dark spots", tone: "good" },
+  quiet: { text: "Quiet — rarely reaches Oulu", tone: "low" },
 } as const;
 
 const B = "font-medium text-ink";
@@ -71,26 +69,30 @@ function Chip({ tone, href, children }: { tone?: Tone; href?: string; children: 
   );
 }
 
-/** The big number with its glyph: the chance, coloured by its label; a cloud over the arcs when clouds are the limit. */
+/** The big number with its glyph: the 0–100 chance score, coloured by its label; a cloud over the arcs when clouds are the limit. */
 function Chance({ value, cloudy }: { value: number; cloudy: boolean }) {
   const { label, tone } = scoreLabel(value);
   return (
-    <div className="mt-3 flex items-center gap-4 sm:gap-6">
+    <div className="flex items-center gap-4 sm:gap-6">
       <Glyph tone={tone} cloudy={cloudy} />
-      <p className="flex items-start leading-none" aria-label={`Chance ${value}: ${label}`}>
+      <p className="flex items-baseline gap-2 leading-none" aria-label={`Chance ${value} of 100: ${label}`}>
         <span className="font-display text-[5.5rem] font-extrabold tracking-tight tabular-nums sm:text-[7rem]">{value}</span>
-        <span className={`mt-2 ml-1 font-display text-3xl font-bold sm:text-4xl ${TONE[tone].text}`}>%</span>
+        <span className={`font-display text-2xl font-bold sm:text-3xl ${TONE[tone].text}`}>/ 100</span>
       </p>
     </div>
   );
 }
 
-/** Kp, clouds and the dark hours, coloured like the reference's high/low line. */
-function Facts({ kpValue, cloud, dark }: { kpValue: number; cloud: number | null; dark: string | null }) {
+/** Dark hours at a place: "Dark until 06:03" while dark, else "Dark 19:42–06:03". */
+const darkText = (p: { dark: { start: string; end: string } | null; sunAlt: number }) =>
+  p.dark ? (p.sunAlt < -12 ? `Dark until ${time(p.dark.end)}` : `Dark ${time(p.dark.start)}–${time(p.dark.end)}`) : null;
+
+/** Kp, clouds and the dark hours, coloured like the reference's high/low line. Clouds are at the best hour, or now. */
+function Facts({ kpValue, cloud, dark, now = false }: { kpValue: number; cloud: number | null; dark: string | null; now?: boolean }) {
   return (
     <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[0.95rem]">
       <span className="text-great"><Term k="kp">Kp</Term> {kp(kpValue)}</span>
-      <span className="text-cloud">Clouds {pct(cloud)}%</span>
+      <span className="text-cloud">Clouds {pct(cloud)}% {now ? "now" : "at best hour"}</span>
       {dark && <span className="text-muted">{dark}</span>}
     </p>
   );
@@ -110,11 +112,8 @@ export function Hero({ data }: { data: AuroraData }) {
   // The alert is about solar activity; say so when darkness or clouds stand in the way.
   const caveats = alert.tone === "low" ? [] : [
     data.now.sunAlt > -6 && "once dark",
-    data.now.cloudCity >= 70 && "if the clouds clear",
+    data.now.cloudCity >= 70 && "if clouds clear",
   ].filter(Boolean);
-  const dark = data.now.dark
-    ? data.now.sunAlt < -12 ? `Dark until ${time(data.now.dark.end)}` : `Dark ${time(data.now.dark.start)}–${time(data.now.dark.end)}`
-    : null;
 
   // Left card body below the title: the big number, the sentence, the facts and the directions chip.
   let figure: React.ReactNode;
@@ -138,12 +137,12 @@ export function Hero({ data }: { data: AuroraData }) {
         <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
       </>
     );
-    facts = by((_, n) => <Facts kpValue={n.kp} cloud={n.cloud} dark={dark} />);
+    facts = by((s, n) => <Facts kpValue={n.kp} cloud={n.cloud} dark={darkText(s)} />);
     go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
   } else if (v === "now") {
     figure = <Chance value={bestNow.now} cloudy={false} />;
     sentence = <>Auroras are likely right now. Head to <b className={B}>{bestNow.name}</b> and look north.</>;
-    facts = <Facts kpValue={data.now.effectiveKp} cloud={bestNow.cloud} dark={dark} />;
+    facts = <Facts kpValue={data.now.effectiveKp} cloud={bestNow.cloud} dark={darkText(bestNow)} now />;
     go = <Chip href={directionsUrl(null, bestNow)}>Directions to {bestNow.name.split(" · ")[0]} <Arrow /></Chip>;
   } else {
     figure = <Chance value={tonight?.peak ?? 0} cloudy={v !== "bright" && tonight?.limit === "clouds"} />;
@@ -159,7 +158,7 @@ export function Hero({ data }: { data: AuroraData }) {
         </>
       );
     }
-    facts = tonight && <Facts kpValue={tonight.kp} cloud={tonight.cloud} dark={dark} />;
+    facts = tonight && <Facts kpValue={tonight.kp} cloud={tonight.cloud} dark={darkText(where ?? data.now)} />;
     if (where && target) go = <Chip href={directionsUrl(null, where)}>{nightLabel(target.date, now)}: {where.name.split(" · ")[0]} <Arrow /></Chip>;
   }
 
@@ -167,8 +166,10 @@ export function Hero({ data }: { data: AuroraData }) {
     <header className="pt-8 sm:pt-12">
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
-          <p className="font-mono text-xs tracking-[0.12em] text-muted uppercase sm:text-sm">
-            {coord(OULU.lat, "N", "S")} · {coord(OULU.lon, "E", "W")} · Foxlight Aurora
+          <p className="text-xs tracking-[0.12em] text-muted uppercase sm:text-sm">
+            <span className="font-mono">{coord(OULU.lat, "N", "S")} · {coord(OULU.lon, "E", "W")}</span>
+            {" · "}
+            <span className="font-semibold tracking-[0.16em]">Foxlight Aurora</span>
           </p>
           <h1 className="mt-2 font-display text-[3.25rem] leading-[0.9] font-extrabold tracking-tight uppercase sm:text-7xl lg:text-[5.5rem]">
             Oulu northern lights
@@ -183,7 +184,6 @@ export function Hero({ data }: { data: AuroraData }) {
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <section aria-labelledby="verdict" className="flex flex-col rounded-2xl border border-rule bg-tile p-6 sm:p-7">
-          <p className="text-xs font-semibold tracking-[0.16em] text-muted uppercase">{LABEL[v]}</p>
           {figure}
           <p id="verdict" role="status" className="mt-3 font-display text-3xl leading-none font-bold tracking-wide uppercase sm:text-4xl">
             {TITLE[v]}
@@ -193,7 +193,7 @@ export function Hero({ data }: { data: AuroraData }) {
           <div className="mt-5 flex flex-wrap gap-2">
             <Chip tone={alert.tone}>
               {alert.text}
-              {caveats.length > 0 && <span className="font-normal text-muted"> ({caveats.join(", ")})</span>}
+              {caveats.length > 0 && <span className="font-normal text-muted"> · {caveats.join(", ")}</span>}
             </Chip>
             {go}
           </div>
