@@ -3,13 +3,12 @@ import { CookieSettings } from "@/components/Analytics";
 import { AuroraFx } from "@/components/AuroraFx";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Hero, recommend } from "@/components/Hero";
-import { Metrics } from "@/components/Metrics";
 import { Nights } from "@/components/Nights";
 import { Outlook } from "@/components/Outlook";
 import { SpotChoiceProvider } from "@/components/SpotChoice";
 import { Spots } from "@/components/Spots";
 import { StaleBanner } from "@/components/StaleBanner";
-import { Section } from "@/components/ui";
+import { Plus, Section } from "@/components/ui";
 import { loadAuroraData } from "@/lib/load";
 import { day, time } from "@/lib/format";
 import { CITY_CENTRE, OULU, rankSpots } from "@/lib/oulu";
@@ -75,73 +74,81 @@ export default function Home() {
     <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData(data.generatedAt) }} />
     <AuroraFx kp={data.now.effectiveKp} />
-    <main className="relative z-[1] mx-auto max-w-3xl px-4 pb-20 sm:px-6">
+    <main className="relative z-[1] px-4 pb-20 sm:px-6">
       <AutoRefresh generatedAt={data.generatedAt} />
-      <StaleBanner generatedAt={data.generatedAt} />
-      <SpotChoiceProvider initial={spot} options={spotOptions}>
-        <Hero data={data} />
-        <Nights data={data} />
-      </SpotChoiceProvider>
-      {/* The per-spot hours only feed "Next nights"; keep them out of this client component. */}
-      <Spots spots={data.spots.map((s) => ({ ...s, hours: undefined, nights: undefined }))} dark={data.now.sunAlt < -6} />
-      <Metrics data={data} />
-      <Outlook data={data} />
+      <div className="mx-auto max-w-6xl">
+        <StaleBanner generatedAt={data.generatedAt} />
+        <SpotChoiceProvider initial={spot} options={spotOptions}>
+          <Hero data={data} />
+          <Nights data={data} />
+          {/* The per-spot hours only feed "Next nights"; keep them out of this client component. */}
+          <Spots spots={data.spots.map((s) => ({ ...s, hours: undefined, nights: undefined }))} dark={data.now.sunAlt < -6} />
+        </SpotChoiceProvider>
+        <Outlook data={data} />
 
-      <Section id="tips" title="First time?">
-        <ul className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
-          {TIPS.map(([t, d]) => (
-            <li key={t}>
-              <p className="font-medium">{t}</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{d}</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
+        <div className="grid gap-x-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <Section id="tips" title="First time?">
+            <ul className="divide-y divide-rule rounded-2xl border border-rule bg-tile">
+              {TIPS.map(([t, d]) => (
+                <li key={t} className="px-5 py-4 sm:px-6">
+                  <p className="font-display text-xl leading-none font-bold tracking-wide uppercase">{t}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">{d}</p>
+                </li>
+              ))}
+            </ul>
+          </Section>
 
-      <Section id="faq" title="Northern lights in Oulu">
-        <div className="divide-y divide-line rounded-2xl border border-line bg-surface/70">
-          {FAQ.map(([q, a]) => (
-            <details key={q} className="group px-5 py-4">
-              <summary className="flex items-baseline justify-between gap-4">
-                <h3 className="font-medium">{q}</h3>
-                <span aria-hidden className="shrink-0 text-faint transition-transform group-open:rotate-45">+</span>
-              </summary>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{a}</p>
-            </details>
-          ))}
+          <Section id="faq" title="Northern lights in Oulu">
+            <div className="divide-y divide-rule rounded-2xl border border-rule bg-tile">
+              {FAQ.map(([q, a]) => (
+                <details key={q} className="group px-5 py-4 sm:px-6">
+                  <summary className="flex items-center justify-between gap-4">
+                    <h3 className="font-medium">{q}</h3>
+                    <Plus />
+                  </summary>
+                  <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">{a}</p>
+                </details>
+              ))}
+            </div>
+          </Section>
         </div>
-      </Section>
 
-      <Advanced data={data} />
+        <Advanced data={data} />
 
-      <footer className="mt-16 border-t border-line pt-6 text-xs leading-relaxed text-faint">
-        <p className="mb-3 text-muted">
-          Why Foxlight? In Finnish the aurora is <i lang="fi">revontulet</i> — &ldquo;fox fires&rdquo; — after the Arctic fox
-          whose tail sweeps sparks from the snow into the sky.
-        </p>
-        <p>
-          Updated {day(data.generatedAt)} {time(data.generatedAt)} (Oulu time) · refreshed several times an hour.
-        </p>
-        <p className="mt-1">
-          Data:{" "}
-          <a className="underline underline-offset-4 hover:text-muted" href="https://en.ilmatieteenlaitos.fi/auroras-in-finland">FMI</a>,{" "}
-          <a className="underline underline-offset-4 hover:text-muted" href="https://rwc-finland.fmi.fi/">RWC Finland</a>,{" "}
-          <a className="underline underline-offset-4 hover:text-muted" href="https://www.swpc.noaa.gov/">NOAA SWPC</a>.
-          A forecast, not a promise — the aurora is famously unpredictable.
-        </p>
-        <p className="mt-1">
-          An independent, non-commercial project — not affiliated with FMI or NOAA. No sign-up. We use Google Analytics for
-          website statistics only if you allow it. You can change your mind any time in <CookieSettings />. A starting point you search for is looked up on
-          OpenStreetMap and saved only in your browser.
-        </p>
-        <p className="mt-1">
-          © 2026 Abhishek Singh Sambyal. Licensed under the{" "}
-          <a className="underline underline-offset-4 hover:text-muted" href="https://www.gnu.org/licenses/gpl-3.0.html">
-            GNU GPLv3
-          </a>
-          .
-        </p>
-      </footer>
+        <footer className="mt-24 grid gap-8 border-t border-rule pt-8 text-sm leading-relaxed text-muted lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div>
+            <p className="font-display text-4xl leading-none font-extrabold tracking-tight text-ink uppercase">Foxlight Aurora</p>
+            <p className="mt-3 max-w-prose">
+              Why Foxlight? In Finnish the aurora is <i lang="fi">revontulet</i> — &ldquo;fox fires&rdquo; — after the Arctic fox
+              whose tail sweeps sparks from the snow into the sky.
+            </p>
+          </div>
+          <div className="space-y-2 font-mono text-xs leading-relaxed text-faint">
+            <p>
+              Updated <span className="text-muted">{day(data.generatedAt)} {time(data.generatedAt)}</span> (Oulu time) · refreshed several times an hour.
+            </p>
+            <p>
+              Data:{" "}
+              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://en.ilmatieteenlaitos.fi/auroras-in-finland">FMI</a>,{" "}
+              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://rwc-finland.fmi.fi/">RWC Finland</a>,{" "}
+              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://www.swpc.noaa.gov/">NOAA SWPC</a>.
+              A forecast, not a promise — the aurora is famously unpredictable.
+            </p>
+            <p>
+              An independent, non-commercial project — not affiliated with FMI or NOAA. No sign-up. We use Google Analytics for
+              website statistics only if you allow it. You can change your mind any time in <CookieSettings />. A starting point you search for is looked up on
+              OpenStreetMap and saved only in your browser.
+            </p>
+            <p>
+              © 2026 Abhishek Singh Sambyal. Licensed under the{" "}
+              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://www.gnu.org/licenses/gpl-3.0.html">
+                GNU GPLv3
+              </a>
+              .
+            </p>
+          </div>
+        </footer>
+      </div>
     </main>
     </>
   );

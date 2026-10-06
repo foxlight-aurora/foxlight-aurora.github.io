@@ -1,9 +1,10 @@
 import type { AuroraData } from "@/lib/data";
 import { outlookHighlights } from "@/lib/forecast";
 import { date } from "@/lib/format";
-import { Card, Section } from "./ui";
+import { LABEL, Section } from "./ui";
 import { Term } from "./Term";
 
+// Daily max Kp → cell colour: quiet days recede, active days glow in the scale's tones.
 const CELL: Record<number, string> = {
   0: "text-faint", 1: "text-faint", 2: "text-muted",
   3: "bg-maybe/10 text-maybe", 4: "bg-good/15 text-good", 5: "bg-great/20 text-great",
@@ -17,34 +18,45 @@ export function Outlook({ data }: { data: AuroraData }) {
 
   return (
     <Section id="outlook" title="Coming weeks" hint={<><Term k="outlook">NOAA 27-day outlook</Term> · max <Term k="kp">Kp</Term> per day</>}>
-      <Card className="p-5">
-        <p className="text-sm leading-relaxed text-muted">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <div className="rounded-2xl border border-rule bg-tile p-5 sm:p-6">
+          <p className={LABEL}>Mark your calendar</p>
           {highlights.length ? (
-            <>Mark your calendar: {highlights.map((h, i) => (
-              <span key={h.from}>
-                {i > 0 && ", "}
-                <b className="font-medium text-ink">{date(h.from)}{h.to !== h.from && ` – ${date(h.to)}`}</b> (Kp {h.kp})
-              </span>
-            ))}. Long-range outlooks follow the Sun&apos;s 27-day rotation, so treat them as hints and check clouds on the day.</>
+            <ul className="mt-4 divide-y divide-rule">
+              {highlights.map((h) => (
+                <li key={h.from} className="flex items-baseline justify-between gap-4 py-3">
+                  <span className="font-display text-2xl leading-none font-bold tracking-wide uppercase">
+                    {date(h.from)}{h.to !== h.from && ` – ${date(h.to)}`}
+                  </span>
+                  <span className={`font-mono text-sm ${h.kp >= 5 ? "text-great" : "text-good"}`}>Kp {h.kp}</span>
+                </li>
+              ))}
+            </ul>
           ) : (
-            <>No stormy days expected in the next four weeks. Kp 3 nights can still deliver from dark spots.</>
+            <p className="mt-4 font-display text-2xl leading-tight font-bold tracking-wide uppercase">No stormy days expected</p>
           )}
-        </p>
-
-        <div className="mt-5 grid grid-cols-7 gap-1 text-center">
-          {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-            <span key={i} className="pb-1 text-[10px] text-faint">{d}</span>
-          ))}
-          {Array.from({ length: lead }, (_, i) => <span key={`pad${i}`} />)}
-          {days.map((d) => (
-            <div key={d.date} title={`${date(d.date)} · Kp ${d.kp}`}
-              className={`rounded-lg py-2 ${CELL[Math.min(d.kp, 5)]}`}>
-              <span className="block text-xs">{Number(d.date.slice(8))}</span>
-              <span className="block font-mono text-[10px] whitespace-nowrap opacity-70">Kp {d.kp}</span>
-            </div>
-          ))}
+          <p className="mt-4 text-sm leading-relaxed text-muted">
+            {highlights.length
+              ? "Long-range outlooks follow the Sun’s 27-day rotation, so treat them as hints and check clouds on the day."
+              : "Nothing above Kp 4 in the next four weeks. Kp 3 nights can still deliver from dark spots."}
+          </p>
         </div>
-      </Card>
+
+        <div className="rounded-2xl border border-rule bg-tile p-4 sm:p-5">
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+              <span key={d} className={`pb-2 ${LABEL}`}>{d}</span>
+            ))}
+            {Array.from({ length: lead }, (_, i) => <span key={`pad${i}`} />)}
+            {days.map((d) => (
+              <div key={d.date} title={`${date(d.date)} · Kp ${d.kp}`} className={`rounded-lg py-2 ${CELL[Math.min(d.kp, 5)]}`}>
+                <span className="block font-display text-xl leading-none font-bold tabular-nums sm:text-2xl">{Number(d.date.slice(8))}</span>
+                <span className="mt-1 block font-mono text-[10px] whitespace-nowrap opacity-80">Kp {d.kp}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </Section>
   );
 }

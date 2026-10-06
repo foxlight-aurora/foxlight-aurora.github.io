@@ -1,10 +1,11 @@
 import type { AuroraData } from "@/lib/data";
 import { nightLabel, outlookHighlights, verdict, type Night, type Verdict } from "@/lib/forecast";
-import { date, day, kp, time, TONE } from "@/lib/format";
-import { directionsUrl } from "@/lib/oulu";
+import { date, day, kp, time, tzName, TONE } from "@/lib/format";
+import { directionsUrl, OULU, scoreLabel, type Tone } from "@/lib/oulu";
 import { BySpot, SpotSelect } from "./SpotChoice";
-import { Score } from "./ui";
 import { Term } from "./Term";
+import { Tiles } from "./Tiles";
+import { Arrow } from "./ui";
 
 type Spot = AuroraData["spots"][number];
 
@@ -16,13 +17,7 @@ const TITLE: Record<Verdict, string> = {
   bright: "Too bright for auroras",
 };
 
-const HEAD_COLOR: Record<Verdict, string> = {
-  now: "text-great",
-  tonight: "text-great",
-  maybe: "text-maybe",
-  unlikely: "text-ink",
-  bright: "text-ink",
-};
+const LABEL: Record<Verdict, string> = { now: "Right now", tonight: "Tonight", maybe: "Tonight", unlikely: "Tonight", bright: "Tonight" };
 
 const ALERT = {
   city: { text: "Good chance even from the city centre", tone: "great" },
@@ -30,9 +25,9 @@ const ALERT = {
   quiet: { text: "Quiet — auroras rarely reach Oulu at this level", tone: "low" },
 } as const;
 
-const SUB = "mt-0.5 block text-xs font-normal text-muted";
 const B = "font-medium text-ink";
 const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
+const coord = (v: number, pos: string, neg: string) => `${Math.abs(v).toFixed(2)}°${v >= 0 ? pos : neg}`;
 
 /** The hero's answer: the verdict, tonight, the window it points to and where to go. */
 export function recommend(data: AuroraData) {
@@ -41,53 +36,71 @@ export function recommend(data: AuroraData) {
   const bestNow = data.spots.reduce((a, b) => (b.now > a.now ? b : a));
   const v = verdict({ nowScore: bestNow.now, sunAlt: data.now.sunAlt, tonight });
   const later = data.nights.find((n) => n !== tonight && n.peak >= 15);
-  // The window the When/Where/Chance row describes: now, tonight, or the next good night.
+  // The window the card describes: now, tonight, or the next good night.
   const target = v === "now" ? null : tonight && tonight.peak >= 15 ? tonight : (later ?? null);
   const where = v === "now" ? bestNow : target ? data.spots.find((s) => s.id === target.spotId)! : null;
   return { now, tonight, bestNow, v, later, target, where };
 }
 
-/** "Sat 4 Oct" + "05:00–07:00"; a window starting after midnight belongs to the previous evening's night (as in "Next nights"). */
-const windowOf = (n: Night) => ({
-  date: day(n.start),
-  time: `${time(n.start)}–${time(n.end)}${day(n.start) !== date(n.date) ? ` · ${date(n.date).split(" ")[0]} night` : ""}`,
-});
+/** "05:00–06:00", plus "· Sun night" when the window starts after midnight (it belongs to the previous evening). */
+const windowOf = (n: Night) =>
+  `${time(n.start)}–${time(n.end)}${day(n.start) !== date(n.date) ? ` · ${date(n.date).split(" ")[0]} night` : ""}`;
 
-function Cells(p: { when: { date: string; time: string } | null; where: Spot | null; score: number; chance: React.ReactNode }) {
-  return [
-    ["When", "When", p.when ? <>{p.when.date}<span className={SUB}>{p.when.time}</span></> : "–"],
-    ["Where", "Where", p.where ? (
-      <>
-        {p.where.name.split(" · ")[0]}
-        <a href={directionsUrl(null, p.where)} target="_blank" rel="noopener noreferrer"
-          className="mt-0.5 block text-xs font-normal text-great/90 underline-offset-4 hover:underline">
-          Directions →
-        </a>
-      </>
-    ) : "–"],
-    ["Chance", <Term key="t" k="chance">Chance</Term>, <><Score value={p.score} />{p.chance}</>],
-  ].map(([key, label, val]) => (
-    <div key={key as string} className="min-w-0 px-4 py-4 sm:px-5">
-      <dt className="text-xs text-faint">{label}</dt>
-      <dd className="mt-1 text-sm leading-snug font-medium sm:text-base">{val}</dd>
-    </div>
-  ));
+/** Aurora arcs over a horizon, in the verdict's colour; a cloud drifts over them when clouds are the problem. */
+function Glyph({ tone, cloudy }: { tone: Tone; cloudy: boolean }) {
+  return (
+    <svg viewBox="0 0 72 72" className={`size-16 shrink-0 sm:size-20 ${TONE[tone].text}`} aria-hidden>
+      <path d="M8 50c10-22 46-22 56 0" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" opacity="0.95" />
+      <path d="M14 42c9-15 35-15 44 0" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" opacity="0.55" />
+      <path d="M21 35c7-8 23-8 30 0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.3" />
+      <path d="M4 58h64" stroke="var(--color-muted)" strokeWidth="2" strokeLinecap="round" />
+      {cloudy && (
+        <path d="M30 60h28a9 9 0 0 0 0-18 13 13 0 0 0-24-2 9 9 0 0 0-4 20Z" fill="var(--color-cloud)" stroke="var(--color-bg)" strokeWidth="2.5" />
+      )}
+    </svg>
+  );
 }
 
-const kpAndClouds = (n: { kp: number; cloud: number | null }) => (
-  <span className={SUB}><Term k="kp">Kp</Term> {kp(n.kp)} · clouds {pct(n.cloud)}%</span>
-);
+function Chip({ tone, href, children }: { tone?: Tone; href?: string; children: React.ReactNode }) {
+  const cls = "inline-flex items-center gap-2 rounded-full border border-rule bg-bg/60 px-3 py-1.5 text-sm font-medium text-ink";
+  const body = <>{tone && <span className={`size-2 shrink-0 rounded-full ${TONE[tone].dot}`} />}<span>{children}</span></>;
+  return href ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`${cls} transition-colors hover:border-great/50`}>{body}</a>
+  ) : (
+    <span className={cls}>{body}</span>
+  );
+}
+
+/** The big number with its glyph: the chance, coloured by its label; a cloud over the arcs when clouds are the limit. */
+function Chance({ value, cloudy }: { value: number; cloudy: boolean }) {
+  const { label, tone } = scoreLabel(value);
+  return (
+    <div className="mt-3 flex items-center gap-4 sm:gap-6">
+      <Glyph tone={tone} cloudy={cloudy} />
+      <p className="flex items-start leading-none" aria-label={`Chance ${value}: ${label}`}>
+        <span className="font-display text-[5.5rem] font-extrabold tracking-tight tabular-nums sm:text-[7rem]">{value}</span>
+        <span className={`mt-2 ml-1 font-display text-3xl font-bold sm:text-4xl ${TONE[tone].text}`}>%</span>
+      </p>
+    </div>
+  );
+}
+
+/** Kp, clouds and the dark hours, coloured like the reference's high/low line. */
+function Facts({ kpValue, cloud, dark }: { kpValue: number; cloud: number | null; dark: string | null }) {
+  return (
+    <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[0.95rem]">
+      <span className="text-great"><Term k="kp">Kp</Term> {kp(kpValue)}</span>
+      <span className="text-cloud">Clouds {pct(cloud)}%</span>
+      {dark && <span className="text-muted">{dark}</span>}
+    </p>
+  );
+}
 
 /** Tonight at one spot, as the text either side of the spot picker. */
 function spotTonight(spot: Spot, night: Night): [React.ReactNode, React.ReactNode] {
-  if (night.peak >= 15) {
-    return [
-      <>Best between <b className={B}>{time(night.start)}</b> and <b className={B}>{time(night.end)}</b> at </>,
-      <>. Expected <Term k="kp">Kp</Term> {kp(night.kp)}, clouds {pct(night.cloud)}%.</>,
-    ];
-  }
-  if (night.limit === "clouds") return ["At ", <>, clouds will likely hide the sky tonight ({pct(night.cloud)}%).</>];
-  return ["At ", <>, activity is too low tonight: expected <Term k="kp">Kp</Term> {kp(night.kp)}, this spot needs about Kp {spot.minKp}.</>];
+  if (night.peak >= 15) return [<>Best <b className={B}>{windowOf(night)}</b> at </>, null];
+  if (night.limit === "clouds") return ["Clouds will likely hide the sky at ", " tonight."];
+  return ["Too little activity for ", <> tonight: this spot needs about <Term k="kp">Kp</Term> {spot.minKp}+.</>];
 }
 
 export function Hero({ data }: { data: AuroraData }) {
@@ -99,43 +112,46 @@ export function Hero({ data }: { data: AuroraData }) {
     data.now.sunAlt > -6 && "once dark",
     data.now.cloudCity >= 70 && "if the clouds clear",
   ].filter(Boolean);
+  const dark = data.now.dark
+    ? data.now.sunAlt < -12 ? `Dark until ${time(data.now.dark.end)}` : `Dark ${time(data.now.dark.start)}–${time(data.now.dark.end)}`
+    : null;
 
-  let detail: React.ReactNode;
-  let cells: React.ReactNode;
-  if (v === "now") {
-    detail = <>Auroras are likely right now. Head to <b className={B}>{bestNow.name}</b> and look north.</>;
-    cells = (
-      <Cells when={{ date: day(data.generatedAt), time: `Now – ${data.now.dark ? time(data.now.dark.end) : "dawn"}` }} where={bestNow}
-        score={bestNow.now} chance={data.now.driver === "fmi" && data.now.activity ? (
-          <span className={SUB}><Term k="rIndex">Local activity</Term>: {data.now.activity.level} · clouds {pct(bestNow.cloud)}%</span>
-        ) : kpAndClouds({ kp: data.now.effectiveKp, cloud: bestNow.cloud })} />
-    );
-  } else if (tonight && (v === "tonight" || v === "maybe")) {
-    // Tonight's window at each spot; the spot picked in the sentence drives the sentence, the row and "Next nights".
+  // Left card body below the title: the big number, the sentence, the facts and the directions chip.
+  let figure: React.ReactNode;
+  let sentence: React.ReactNode;
+  let facts: React.ReactNode;
+  let go: React.ReactNode = null;
+  if (tonight && (v === "tonight" || v === "maybe")) {
+    // Tonight at each spot; the spot picked in the sentence drives the number, the facts, the chip and the chart.
     const views = data.spots.flatMap((s) => {
       const n = s.nights.find((x) => x.date === tonight.date);
       return n ? [{ id: s.id, s, n }] : [];
     });
-    const text = views.map(({ id, s, n }) => [id, spotTonight(s, n)] as const);
+    const by = (f: (s: Spot, n: Night) => React.ReactNode) => <BySpot views={Object.fromEntries(views.map(({ id, s, n }) => [id, f(s, n)]))} />;
+    const text = Object.fromEntries(views.map(({ id, s, n }) => [id, spotTonight(s, n)]));
+    figure = by((_, n) => <Chance value={n.peak} cloudy={n.limit === "clouds" && n.peak < 35} />);
     // The picker stays outside the switching text, so it keeps focus while you change it.
-    detail = (
+    sentence = (
       <>
-        <BySpot views={Object.fromEntries(text.map(([id, [before]]) => [id, before]))} />
+        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [before]]) => [id, before]))} />
         <SpotSelect />
-        <BySpot views={Object.fromEntries(text.map(([id, [, after]]) => [id, after]))} />
+        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
       </>
     );
-    cells = (
-      <BySpot views={Object.fromEntries(views.map(({ id, s, n }) => [id,
-        <Cells key={id} when={n.peak >= 15 ? windowOf(n) : null} where={s} score={n.peak} chance={kpAndClouds(n)} />,
-      ]))} />
-    );
+    facts = by((_, n) => <Facts kpValue={n.kp} cloud={n.cloud} dark={dark} />);
+    go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
+  } else if (v === "now") {
+    figure = <Chance value={bestNow.now} cloudy={false} />;
+    sentence = <>Auroras are likely right now. Head to <b className={B}>{bestNow.name}</b> and look north.</>;
+    facts = <Facts kpValue={data.now.effectiveKp} cloud={bestNow.cloud} dark={dark} />;
+    go = <Chip href={directionsUrl(null, bestNow)}>Directions to {bestNow.name.split(" · ")[0]} <Arrow /></Chip>;
   } else {
+    figure = <Chance value={tonight?.peak ?? 0} cloudy={v !== "bright" && tonight?.limit === "clouds"} />;
     if (v === "bright") {
-      detail = <>Oulu nights are too light right now. Aurora season runs from late August to mid-April.</>;
+      sentence = <>Oulu nights are too light right now. Aurora season runs from late August to mid-April.</>;
     } else {
       const why = tonight?.limit === "clouds" ? "Clouds will cover the sky" : "Solar activity is too low to reach Oulu";
-      detail = (
+      sentence = (
         <>{why}.{" "}
           {later ? <>Better chance <b className={B}>{nightLabel(later.date, now).toLowerCase()}</b>, {time(later.start)}–{time(later.end)}.</>
             : nextActive ? <>Next active days expected around <b className={B}>{date(nextActive.from)}</b> (Kp {nextActive.kp}).</>
@@ -143,37 +159,48 @@ export function Hero({ data }: { data: AuroraData }) {
         </>
       );
     }
-    const basis = target ?? tonight;
-    cells = (
-      <Cells when={target ? windowOf(target) : null} where={where} score={basis?.peak ?? 0} chance={basis && kpAndClouds(basis)} />
-    );
+    facts = tonight && <Facts kpValue={tonight.kp} cloud={tonight.cloud} dark={dark} />;
+    if (where && target) go = <Chip href={directionsUrl(null, where)}>{nightLabel(target.date, now)}: {where.name.split(" · ")[0]} <Arrow /></Chip>;
   }
 
   return (
-    <header className="pt-10 sm:pt-16">
-      <h1 className="text-xs font-medium tracking-[0.18em] text-muted uppercase">
-        Foxlight Aurora <span className="text-faint">· Northern lights forecast for Oulu</span>
-      </h1>
-      <p role="status" className={`mt-4 text-5xl font-semibold tracking-tight text-balance sm:text-6xl ${HEAD_COLOR[v]}`}>
-        {TITLE[v]}
-      </p>
-      <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted">{detail}</p>
+    <header className="pt-8 sm:pt-12">
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="min-w-0">
+          <p className="font-mono text-xs tracking-[0.12em] text-muted uppercase sm:text-sm">
+            {coord(OULU.lat, "N", "S")} · {coord(OULU.lon, "E", "W")} · Foxlight Aurora
+          </p>
+          <h1 className="mt-2 font-display text-[3.25rem] leading-[0.9] font-extrabold tracking-tight uppercase sm:text-7xl lg:text-[5.5rem]">
+            Oulu northern lights
+          </h1>
+        </div>
+        <p className="font-mono text-xs leading-relaxed text-muted sm:text-right sm:text-sm">
+          Updated <b className="font-semibold text-ink">{day(data.generatedAt)}, {time(data.generatedAt)}</b>
+          <br />
+          Times in Oulu ({tzName(data.generatedAt)})
+        </p>
+      </div>
 
-      {target && target !== tonight && <p className="mt-8 mb-2 text-xs text-faint">Next good window</p>}
-      <dl className={`${target && target !== tonight ? "" : "mt-8"} grid grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface/70`}>
-        {cells}
-      </dl>
+      <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <section aria-labelledby="verdict" className="flex flex-col rounded-2xl border border-rule bg-tile p-6 sm:p-7">
+          <p className="text-xs font-semibold tracking-[0.16em] text-muted uppercase">{LABEL[v]}</p>
+          {figure}
+          <p id="verdict" role="status" className="mt-3 font-display text-3xl leading-none font-bold tracking-wide uppercase sm:text-4xl">
+            {TITLE[v]}
+          </p>
+          <p className="mt-2 text-lg leading-relaxed text-muted">{sentence}</p>
+          {facts}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Chip tone={alert.tone}>
+              {alert.text}
+              {caveats.length > 0 && <span className="font-normal text-muted"> ({caveats.join(", ")})</span>}
+            </Chip>
+            {go}
+          </div>
+        </section>
 
-      <p className="mt-4 inline-block rounded-2xl border border-line bg-bg px-3 py-1.5 text-xs leading-relaxed text-muted">
-        <span className={`mr-2 inline-block size-1.5 rounded-full align-middle ${TONE[alert.tone].dot}`} />
-        {data.now.driver === "fmi" && data.now.activity ? (
-          <Term k="rIndex" icon><span className="text-ink">Local activity: {data.now.activity.level}</span></Term>
-        ) : (
-          <Term k="kp" icon><span className="font-mono text-ink tabular-nums">Kp {kp(data.now.effectiveKp)}</span></Term>
-        )}{" "}
-        {alert.text}
-        {caveats.length > 0 && <span className="text-faint"> ({caveats.join(", ")})</span>}
-      </p>
+        <Tiles data={data} />
+      </div>
     </header>
   );
 }

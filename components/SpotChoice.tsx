@@ -16,7 +16,7 @@ export function SpotChoiceProvider({ initial, options, children }: { initial: st
   return <Ctx.Provider value={{ id, options, choose }}>{children}</Ctx.Provider>;
 }
 
-function useSpotChoice() {
+export function useSpotChoice() {
   const c = useContext(Ctx);
   if (!c) throw new Error("useSpotChoice needs a SpotChoiceProvider");
   return c;

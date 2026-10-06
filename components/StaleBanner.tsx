@@ -19,11 +19,14 @@ export function StaleBanner({ generatedAt }: { generatedAt: string }) {
   if (age < 75) return null;
   const ago = age >= 120 ? `${Math.round(age / 60)} hours` : `${age} minutes`;
   return (
-    <div role="alert" className="mt-6 rounded-2xl border border-maybe/40 bg-maybe/10 p-4 text-sm leading-relaxed text-maybe">
-      This forecast was last updated {ago} ago, so live conditions may have changed. For the latest, check{" "}
-      <a href="https://en.ilmatieteenlaitos.fi/northern-lights" className="underline underline-offset-4" target="_blank" rel="noopener noreferrer">
-        FMI&apos;s northern lights page
-      </a>.
+    <div role="alert" className="mt-6 flex items-start gap-3 rounded-2xl border border-maybe/40 bg-tile p-4 text-sm leading-relaxed text-maybe">
+      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-maybe" aria-hidden />
+      <p>
+        This forecast was last updated {ago} ago, so live conditions may have changed. For the latest, check{" "}
+        <a href="https://en.ilmatieteenlaitos.fi/northern-lights" className="underline underline-offset-4" target="_blank" rel="noopener noreferrer">
+          FMI&apos;s northern lights page
+        </a>.
+      </p>
     </div>
   );
 }

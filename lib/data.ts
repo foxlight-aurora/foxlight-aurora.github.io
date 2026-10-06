@@ -133,6 +133,9 @@ export async function getAuroraData() {
       ...spot,
       cloud: cloudNow(spot.id),
       now: visibilityScore({ kp: effectiveKp, minKp: spot.minKp, cloud: cloudNow(spot.id), sunAlt }),
+      // Darkness at the spot itself (a few minutes apart across the area).
+      sunAlt: sunAltitude(now, spot.lat, spot.lon),
+      dark: darkWindow(now, spot),
       // This spot's best window over the next 3 nights.
       best: spotNights.reduce<Night | null>((a, n) => (!a || n.peak > a.peak ? n : a), null),
       nights: spotNights,

@@ -2,7 +2,7 @@ import type { AuroraData } from "@/lib/data";
 import { kp, time } from "@/lib/format";
 import type { Point } from "@/lib/parse";
 import { KpChart } from "./KpChart";
-import { Section } from "./ui";
+import { LABEL, Plus, Section } from "./ui";
 import { Term } from "./Term";
 
 function Spark({ pts, name, label, unit, zero }: { pts: Point[]; name: string; label: React.ReactNode; unit: string; zero?: boolean }) {
@@ -16,9 +16,11 @@ function Spark({ pts, name, label, unit, zero }: { pts: Point[]; name: string; l
   const y = (v: number) => H - ((v - lo) / (hi - lo)) * H;
   return (
     <div>
-      <p className="flex justify-between text-xs text-faint">
-        <span>{label}</span>
-        <span className="font-mono text-ink tabular-nums">{vals.at(-1)!.toFixed(zero ? 1 : 0)} {unit}</span>
+      <p className="flex items-baseline justify-between gap-4">
+        <span className={LABEL}>{label}</span>
+        <span className="font-display text-2xl leading-none font-bold tabular-nums">
+          {vals.at(-1)!.toFixed(zero ? 1 : 0)} <span className="text-base text-muted">{unit}</span>
+        </span>
       </p>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 h-16 w-full" preserveAspectRatio="none" role="img" aria-label={`${name}, last 2 hours`}>
         {zero && <line x1={0} x2={W} y1={y(0)} y2={y(0)} className="stroke-line" strokeWidth={1} />}
@@ -49,54 +51,56 @@ export function Advanced({ data }: { data: AuroraData }) {
 
   return (
     <Section id="advanced" title="For the nerds">
-      <details className="group rounded-2xl border border-line bg-surface/70">
-        <summary className="flex items-center justify-between p-5 text-sm">
-          <span>Raw data, charts &amp; method</span>
-          <span className="text-faint transition-transform group-open:rotate-45">+</span>
+      <details className="group rounded-2xl border border-rule bg-tile">
+        <summary className="flex items-center justify-between gap-4 p-5 sm:px-6">
+          <span className="font-display text-2xl leading-none font-bold tracking-wide uppercase">Raw data, charts &amp; method</span>
+          <Plus />
         </summary>
-        <div className="space-y-8 border-t border-line p-5">
+        <div className="space-y-10 border-t border-rule p-5 sm:p-6">
           <div>
-            <p className="mb-3 text-xs text-faint"><Term k="kp">Kp</Term> per 3-hour block — past 24 h (solid) and NOAA forecast (faded), Oulu time. Hover or tap a bar.</p>
+            <p className="mb-3 text-sm text-muted"><Term k="kp">Kp</Term> per 3-hour block — past 24 h (solid) and NOAA forecast (faded), Oulu time. Hover or tap a bar.</p>
             <KpChart bins={data.kpBins} now={Date.parse(data.generatedAt)} />
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-8 sm:grid-cols-2">
             <Spark pts={data.wind.speed} name="Solar wind speed" label={<><Term k="solarWind">Solar wind speed</Term> · 2 h</>} unit="km/s" />
             <Spark pts={data.wind.bz} name="Bz" label={<><Term k="bz">Bz</Term> (GSM) · 2 h</>} unit="nT" zero />
           </div>
 
-          <dl className="divide-y divide-line text-sm">
-            {rows.map(([key, k, v]) => (
-              <div key={key} className="flex justify-between gap-4 py-2">
-                <dt className="text-muted">{k}</dt>
-                <dd className="font-mono tabular-nums">{v}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="grid gap-10 lg:grid-cols-2">
+            <dl className="divide-y divide-rule self-start text-sm">
+              {rows.map(([key, k, v]) => (
+                <div key={key} className="flex justify-between gap-4 py-2">
+                  <dt className="text-muted">{k}</dt>
+                  <dd className="text-right font-mono tabular-nums">{v}</dd>
+                </div>
+              ))}
+            </dl>
 
-          <div className="space-y-2 text-sm leading-relaxed text-muted">
-            <p className="text-ink">How the chance is calculated</p>
-            <p>
-              Each spot has a Kp for an even chance: 3+ for dark sky, 4+ for semi-dark shores, 5+ for city lights. Oulu
-              sits at ~62° geomagnetic latitude, near the auroral oval&apos;s southern edge; FMI counts auroras here on
-              roughly 1 in 4 clear, dark nights.
-            </p>
-            <p className="font-mono text-xs text-faint">
-              chance = 100 × activity(Kp) × (1 − clouds) × darkness(sun altitude)
-            </p>
-            <p>
-              Activity is an S-curve: even at the spot&apos;s Kp, ~12% one Kp below, ~88% one above. Checked against
-              every dark night from 2014 to 2025 (a full solar cycle of measured Kp), dark spots average about 1 in 3
-              clear nights, in line with FMI. Darkness ramps from 0 at −6° to 1 at −12°, taken at the middle of each
-              hour. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line = 50%
-              chance of weak auroras ≈ even chance at dark spots; red line = 50% chance of strong ones ≈ even chance in
-              town), because local substorms show up there minutes after they start — long before the global 3-hour
-              Kp. Live readings older than 30 minutes are never shown as &ldquo;now&rdquo;.
-            </p>
+            <div className="space-y-3 text-sm leading-relaxed text-muted">
+              <p className={LABEL}>How the chance is calculated</p>
+              <p>
+                Each spot has a Kp for an even chance: 3+ for dark sky, 4+ for semi-dark shores, 5+ for city lights. Oulu
+                sits at ~62° geomagnetic latitude, near the auroral oval&apos;s southern edge; FMI counts auroras here on
+                roughly 1 in 4 clear, dark nights.
+              </p>
+              <p className="font-mono text-xs text-faint">
+                chance = 100 × activity(Kp) × (1 − clouds) × darkness(sun altitude)
+              </p>
+              <p>
+                Activity is an S-curve: even at the spot&apos;s Kp, ~12% one Kp below, ~88% one above. Checked against
+                every dark night from 2014 to 2025 (a full solar cycle of measured Kp), dark spots average about 1 in 3
+                clear nights, in line with FMI. Darkness ramps from 0 at −6° to 1 at −12°, taken at the middle of each
+                hour. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line = 50%
+                chance of weak auroras ≈ even chance at dark spots; red line = 50% chance of strong ones ≈ even chance in
+                town), because local substorms show up there minutes after they start — long before the global 3-hour
+                Kp. Live readings older than 30 minutes are never shown as &ldquo;now&rdquo;.
+              </p>
+            </div>
           </div>
 
           <div>
-            <p className="mb-2 text-sm text-ink">Data sources</p>
+            <p className={`mb-3 ${LABEL}`}>Data sources</p>
             <ul className="space-y-1 text-sm">
               {data.sources.map((s) => (
                 <li key={s.name} className="flex items-center gap-2 text-muted">

@@ -87,4 +87,4 @@ License as published by the Free Software Foundation, either version 3 of the Li
 version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
 
-Forecast data comes from NOAA SWPC and FMI under their own terms; the Geist fonts are under the SIL Open Font License.
+Forecast data comes from NOAA SWPC and FMI under their own terms; the Geist, Barlow Condensed and JetBrains Mono fonts are under the SIL Open Font License.

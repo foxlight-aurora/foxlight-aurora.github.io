@@ -89,10 +89,10 @@ export function summarizeNights(hours: Hour[], minKp = DARKEST_MIN_KP): Night[] 
   });
 }
 
-/** Current or next period with the sun below -12°, or null (light summer nights). */
-export function darkWindow(now: Date): { start: string; end: string } | null {
+/** Current or next period with the sun below -12° at a place (Oulu by default), or null (light summer nights). */
+export function darkWindow(now: Date, at: { lat: number; lon: number } = OULU): { start: string; end: string } | null {
   const STEP = 5 * 60000;
-  const isDark = (ms: number) => sunAltitude(new Date(ms), OULU.lat, OULU.lon) < -12;
+  const isDark = (ms: number) => sunAltitude(new Date(ms), at.lat, at.lon) < -12;
   let t = now.getTime();
   const limit = t + 36 * HOUR;
   while (t < limit && !isDark(t)) t += STEP;

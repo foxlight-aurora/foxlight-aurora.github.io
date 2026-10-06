@@ -108,17 +108,17 @@ export function Analytics() {
     {/* Scroll room so the banner never hides the end of the footer. */}
     <div aria-hidden className="h-40 sm:h-24" />
     <div role="dialog" aria-label="Visit statistics" className="fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4">
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-xl shadow-black/50 backdrop-blur sm:flex-row sm:items-center">
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-rule bg-surface p-4 text-sm shadow-xl shadow-black/60 sm:flex-row sm:items-center">
         <p className="flex-1 leading-relaxed text-muted">
           Allowing cookies lets us use Google Analytics for website statistics.
         </p>
         <div className="flex shrink-0 gap-2">
           <button onClick={() => { unload(); save("denied"); }}
-            className="rounded-xl border border-line px-4 py-2 text-muted hover:border-faint hover:text-ink">
+            className="rounded-full border border-rule px-4 py-2 font-medium text-muted transition-colors hover:border-faint hover:text-ink">
             No thanks
           </button>
           <button onClick={() => save("granted")}
-            className="rounded-xl border border-great/40 bg-great/10 px-4 py-2 text-great hover:bg-great/20">
+            className="rounded-full border border-great/40 bg-great/10 px-4 py-2 font-medium text-great transition-colors hover:bg-great/20">
             Allow
           </button>
         </div>

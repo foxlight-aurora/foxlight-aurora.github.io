@@ -42,3 +42,6 @@ next-env.d.ts
 
 # generated data snapshot (scripts/fetch-data.mts)
 /data/
+
+# design-tool working files (review screenshots, notes)
+/.impeccable/

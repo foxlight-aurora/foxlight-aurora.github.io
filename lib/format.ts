@@ -23,3 +23,7 @@ export const TONE: Record<Tone, { text: string; bg: string; dot: string }> = {
   maybe: { text: "text-maybe", bg: "bg-maybe", dot: "bg-maybe" },
   low: { text: "text-muted", bg: "bg-low", dot: "bg-low" },
 };
+
+const tzFmt = new Intl.DateTimeFormat("en-GB", { timeZone: tz, timeZoneName: "short" });
+/** "EEST" or "EET": Oulu's time zone at that moment. */
+export const tzName = (iso: string) => tzFmt.formatToParts(new Date(iso)).find((p) => p.type === "timeZoneName")?.value ?? "Oulu time";
