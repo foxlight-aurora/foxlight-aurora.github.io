@@ -99,14 +99,24 @@ function Facts({ kpValue, cloud, dark, now = false }: { kpValue: number; cloud: 
 }
 
 /** Tonight at one spot, as the text either side of the spot picker. */
-function spotTonight(spot: Spot, night: Night): [React.ReactNode, React.ReactNode] {
+function spotTonight(spot: Spot, night: Night, now: Date, otherwise: React.ReactNode): [React.ReactNode, React.ReactNode] {
   if (night.peak >= 15) return [<>Best <b className={B}>{windowOf(night)}</b> at </>, null];
-  if (night.limit === "clouds") return ["Clouds will likely hide the sky at ", " tonight."];
-  return ["Too little activity for ", <> tonight: this spot needs about <Term k="kp">Kp</Term> {spot.minKp}+.</>];
+  // A weak night points to this spot's next better one, else to `otherwise`.
+  const later = spot.nights.find((n) => n.date > night.date && n.peak >= 15);
+  const then = later ? <> Better chance <b className={B}>{nightLabel(later.date, now).toLowerCase()}</b>, {time(later.start)}–{time(later.end)}.</> : otherwise;
+  if (night.limit === "clouds") return ["Clouds will likely hide the sky at ", <> tonight.{then}</>];
+  return ["Too little activity for ", <> tonight: this spot needs about <Term k="kp">Kp</Term> {spot.minKp}+.{then}</>];
+}
+
+/** Right now at one spot, as the text either side of the spot picker. */
+function spotNow(spot: Spot, best: Spot): [React.ReactNode, React.ReactNode] {
+  if (spot.now >= 35) return ["Auroras are likely right now at ", ". Look north."];
+  const why = (spot.cloud ?? 0) >= 50 ? "clouds are in the way" : <>it needs about <Term k="kp">Kp</Term> {spot.minKp}+</>;
+  return ["Weaker right now at ", <>: {why}. Best now is <b className={B}>{best.name}</b> ({best.now}).</>];
 }
 
 export function Hero({ data }: { data: AuroraData }) {
-  const { now, tonight, bestNow, v, later, target, where } = recommend(data);
+  const { now, tonight, bestNow, v } = recommend(data);
   const nextActive = outlookHighlights(data.outlook)[0];
   const alert = ALERT[data.now.alert];
   // The alert is about solar activity; say so when darkness or clouds stand in the way.
@@ -120,14 +130,16 @@ export function Hero({ data }: { data: AuroraData }) {
   let sentence: React.ReactNode;
   let facts: React.ReactNode;
   let go: React.ReactNode = null;
-  if (tonight && (v === "tonight" || v === "maybe")) {
+  let title: React.ReactNode = TITLE[v];
+  if (tonight && (v === "tonight" || v === "maybe" || v === "unlikely")) {
     // Tonight at each spot; the spot picked in the sentence drives the number, the facts, the chip and the chart.
     const views = data.spots.flatMap((s) => {
       const n = s.nights.find((x) => x.date === tonight.date);
       return n ? [{ id: s.id, s, n }] : [];
     });
     const by = (f: (s: Spot, n: Night) => React.ReactNode) => <BySpot views={Object.fromEntries(views.map(({ id, s, n }) => [id, f(s, n)]))} />;
-    const text = Object.fromEntries(views.map(({ id, s, n }) => [id, spotTonight(s, n)]));
+    const soon = nextActive && <> Next active days expected around <b className={B}>{date(nextActive.from)}</b> (Kp {nextActive.kp}).</>;
+    const text = Object.fromEntries(views.map(({ id, s, n }) => [id, spotTonight(s, n, now, soon)]));
     figure = by((_, n) => <Chance value={n.peak} cloudy={n.limit === "clouds" && n.peak < 35} />);
     // The picker stays outside the switching text, so it keeps focus while you change it.
     sentence = (
@@ -140,26 +152,24 @@ export function Hero({ data }: { data: AuroraData }) {
     facts = by((s, n) => <Facts kpValue={n.kp} cloud={n.cloud} dark={darkText(s)} />);
     go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
   } else if (v === "now") {
-    figure = <Chance value={bestNow.now} cloudy={false} />;
-    sentence = <>Auroras are likely right now. Head to <b className={B}>{bestNow.name}</b> and look north.</>;
-    facts = <Facts kpValue={data.now.effectiveKp} cloud={bestNow.cloud} dark={darkText(bestNow)} now />;
-    go = <Chip href={directionsUrl(null, bestNow)}>Directions to {bestNow.name.split(" · ")[0]} <Arrow /></Chip>;
+    // Right now at each spot; the picker starts at the best one, and a weaker pick points back to it.
+    const by = (f: (s: Spot) => React.ReactNode) => <BySpot views={Object.fromEntries(data.spots.map((s) => [s.id, f(s)]))} />;
+    const text = Object.fromEntries(data.spots.map((s) => [s.id, spotNow(s, bestNow)]));
+    title = by((s) => (s.now >= 35 ? TITLE.now : "Better elsewhere now"));
+    figure = by((s) => <Chance value={s.now} cloudy={(s.cloud ?? 0) >= 50 && s.now < 35} />);
+    sentence = (
+      <>
+        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [before]]) => [id, before]))} />
+        <SpotSelect />
+        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
+      </>
+    );
+    facts = by((s) => <Facts kpValue={data.now.effectiveKp} cloud={s.cloud} dark={darkText(s)} now />);
+    go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
   } else {
-    figure = <Chance value={tonight?.peak ?? 0} cloudy={v !== "bright" && tonight?.limit === "clouds"} />;
-    if (v === "bright") {
-      sentence = <>Oulu nights are too light right now. Aurora season runs from late August to mid-April.</>;
-    } else {
-      const why = tonight?.limit === "clouds" ? "Clouds will cover the sky" : "Solar activity is too low to reach Oulu";
-      sentence = (
-        <>{why}.{" "}
-          {later ? <>Better chance <b className={B}>{nightLabel(later.date, now).toLowerCase()}</b>, {time(later.start)}–{time(later.end)}.</>
-            : nextActive ? <>Next active days expected around <b className={B}>{date(nextActive.from)}</b> (Kp {nextActive.kp}).</>
-            : null}
-        </>
-      );
-    }
-    facts = tonight && <Facts kpValue={tonight.kp} cloud={tonight.cloud} dark={darkText(where ?? data.now)} />;
-    if (where && target) go = <Chip href={directionsUrl(null, where)}>{nightLabel(target.date, now)}: {where.name.split(" · ")[0]} <Arrow /></Chip>;
+    // Too bright: no night ahead to show.
+    figure = <Chance value={0} cloudy={false} />;
+    sentence = <>Oulu nights are too light right now. Aurora season runs from late August to mid-April.</>;
   }
 
   return (
@@ -186,7 +196,7 @@ export function Hero({ data }: { data: AuroraData }) {
         <section aria-labelledby="verdict" className="flex flex-col rounded-2xl border border-rule bg-tile p-6 sm:p-7">
           {figure}
           <p id="verdict" role="status" className="mt-3 font-display text-3xl leading-none font-bold tracking-wide uppercase sm:text-4xl">
-            {TITLE[v]}
+            {title}
           </p>
           <p className="mt-2 text-lg leading-relaxed text-muted">{sentence}</p>
           {facts}
