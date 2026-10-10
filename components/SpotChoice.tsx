@@ -27,6 +27,12 @@ export function BySpot({ views }: { views: Record<string, React.ReactNode> }) {
   return views[useSpotChoice().id] ?? null;
 }
 
+/** The chosen spot's name, for places that follow the choice without offering their own picker. */
+export function SpotName() {
+  const { id, options } = useSpotChoice();
+  return <>{options.find((o) => o.id === id)?.name ?? id}</>;
+}
+
 /**
  * Inline spot picker: the spot's name sits in the sentence as a chip with a chevron, so it reads as
  * something to change. A native select is laid over it (keyboard, screen readers and the phone's own

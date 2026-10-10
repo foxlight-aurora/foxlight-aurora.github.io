@@ -18,7 +18,7 @@ export type NightView = {
 };
 
 const GAP = 1.5; // hour-widths between nights
-const MIN = 5; // a night already under way keeps at least this width, so its labels fit
+const MIN = 9; // a night already under way keeps at least this width, so its name fits on a phone
 const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
 
 function summary(n: NightView) {
@@ -135,9 +135,10 @@ export function NightsChart({ nights, now }: { nights: NightView[]; now: string 
         </div>
         <div className="relative mt-2 h-5" aria-hidden>
           {spans.map((s, k) => (
-            <span key={k} className="absolute border-t border-rule pt-1.5 text-xs font-semibold tracking-[0.12em] whitespace-nowrap text-muted uppercase"
+            // Each name stays inside its own night: the date shows only where it fits, and a name that still doesn't is cut short.
+            <span key={k} className="@container absolute truncate border-t border-rule pt-1.5 text-xs font-semibold tracking-[0.12em] text-muted uppercase"
               style={{ left: `${(s.from / W) * 100}%`, width: `${((s.to - s.from) / W) * 100}%` }}>
-              {nights[k].label} <span className="hidden font-normal tracking-normal text-faint normal-case sm:inline">{nights[k].day}</span>
+              {nights[k].label} <span className="hidden font-normal tracking-normal text-faint normal-case @min-[9rem]:inline">{nights[k].day}</span>
             </span>
           ))}
         </div>

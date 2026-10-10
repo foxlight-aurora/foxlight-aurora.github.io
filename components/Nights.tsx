@@ -2,7 +2,7 @@ import type { AuroraData } from "@/lib/data";
 import { nightLabel, nightOf } from "@/lib/forecast";
 import { date } from "@/lib/format";
 import { NightsChart, type NightView } from "./NightsChart";
-import { BySpot, SpotSelect } from "./SpotChoice";
+import { BySpot, SpotName } from "./SpotChoice";
 import { Term } from "./Term";
 
 export function Nights({ data }: { data: AuroraData }) {
@@ -32,7 +32,7 @@ export function Nights({ data }: { data: AuroraData }) {
     <section id="nights" aria-labelledby="nights-h" className="mt-4 rounded-2xl border border-rule bg-tile p-5 sm:p-7">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <h2 id="nights-h" className="text-xs font-semibold tracking-[0.16em] text-muted uppercase">
-          Next 3 nights at <span className="tracking-normal normal-case"><SpotSelect /></span>
+          Next 3 nights at <span className="text-ink"><SpotName /></span>
         </h2>
         <p className="flex items-center gap-4 text-sm text-muted">
           <span className="flex items-center gap-2"><span className="size-3 rounded-sm bg-great" /><Term k="chance">Chance</Term></span>
