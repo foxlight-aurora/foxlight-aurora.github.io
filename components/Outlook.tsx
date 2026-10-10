@@ -48,12 +48,16 @@ export function Outlook({ data }: { data: AuroraData }) {
             ))}
             {Array.from({ length: lead }, (_, i) => <span key={`pad${i}`} />)}
             {days.map((d) => (
-              <div key={d.date} title={`${date(d.date)} · Kp ${d.kp}`} className={`rounded-lg py-2 ${CELL[Math.min(d.kp, 5)]}`}>
+              <div key={d.date} title={`${date(d.date)} · Kp ${d.kp}${d.shortRange ? " · 3-day forecast" : ""}`}
+                className={`rounded-lg py-2 ${CELL[Math.min(d.kp, 5)]} ${d.shortRange ? "ring-1 ring-line ring-inset" : ""}`}>
                 <span className="block font-display text-xl leading-none font-bold tabular-nums sm:text-2xl">{Number(d.date.slice(8))}</span>
                 <span className="mt-1 block font-mono text-[0.7rem] whitespace-nowrap">Kp {d.kp}</span>
               </div>
             ))}
           </div>
+          {days.some((d) => d.shortRange) && (
+            <p className="mt-3 text-xs text-faint">Outlined days use NOAA&rsquo;s 3-day forecast and today&rsquo;s activity, which replace the weekly outlook as they come in.</p>
+          )}
         </div>
       </div>
     </Section>

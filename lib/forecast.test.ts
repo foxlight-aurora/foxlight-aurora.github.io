@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHours, darkWindow, kpAt, nightLabel, outlookHighlights, summarizeNights, verdict } from "./forecast";
+import { buildHours, darkWindow, kpAt, nightLabel, outlookHighlights, refineOutlook, summarizeNights, verdict } from "./forecast";
 import { sunAltitude, type Spot } from "./oulu";
 
 const bins = [
@@ -143,5 +143,27 @@ describe("outlookHighlights", () => {
       { from: "2026-10-04", to: "2026-10-05", kp: 5 },
       { from: "2026-10-22", to: "2026-10-22", kp: 4 },
     ]);
+  });
+});
+
+describe("refineOutlook", () => {
+  const days = [
+    { date: "2026-10-10", ap: 5, kp: 2 },
+    { date: "2026-10-11", ap: 5, kp: 2 },
+    { date: "2026-10-12", ap: 5, kp: 3 },
+  ];
+  const day = (date: string, kps: number[]) =>
+    kps.map((kp, i) => ({ start: `${date}T${String(i * 3).padStart(2, "0")}:00:00Z`, kp, kind: "predicted" as const, scale: null }));
+  const kpBins = [...day("2026-10-10", [1, 2, 6, 5.67, 4, 3, 3, 2]), ...day("2026-10-11", [4.67, 4, 3, 3, 2, 2, 2, 2]), ...day("2026-10-12", [3, 3])];
+
+  it("uses the 3-day forecast's largest Kp on days it fully covers", () => {
+    expect(refineOutlook(days, kpBins, { date: "2026-10-10", kp: 3 }).map((d) => [d.kp, d.shortRange])).toEqual([
+      [6, true],
+      [5, true],
+      [3, false],
+    ]);
+  });
+  it("raises today to the nowcast", () => {
+    expect(refineOutlook(days, [], { date: "2026-10-10", kp: 6.3 })[0]).toMatchObject({ kp: 6, shortRange: true });
   });
 });

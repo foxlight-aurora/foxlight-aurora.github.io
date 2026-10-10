@@ -125,6 +125,22 @@ export function nightLabel(date: string, now: Date): string {
   return `${weekday.format(new Date(date))} night`;
 }
 
+/**
+ * The 27-day outlook with each day NOAA's 3-day forecast fully covers replaced by its largest Kp (observed or
+ * predicted), and today raised to the nowcast: the outlook is issued weekly and can't see storms coming.
+ */
+export function refineOutlook<D extends { date: string; kp: number }>(days: D[], bins: KpBin[], today: { date: string; kp: number }) {
+  const byDay = new Map<string, number[]>();
+  for (const b of bins) byDay.set(b.start.slice(0, 10), [...(byDay.get(b.start.slice(0, 10)) ?? []), b.kp]);
+  return days.map((d) => {
+    const kps = byDay.get(d.date);
+    const covered = kps?.length === 8; // eight 3-hour bins
+    let kp = covered ? Math.round(Math.max(...kps)) : d.kp;
+    if (d.date === today.date) kp = Math.max(kp, Math.round(today.kp));
+    return { ...d, kp, shortRange: covered || d.date === today.date };
+  });
+}
+
 /** Runs of consecutive Kp 4+ days from the 27-day outlook. */
 export function outlookHighlights(days: { date: string; kp: number }[]) {
   const out: { from: string; to: string; kp: number }[] = [];

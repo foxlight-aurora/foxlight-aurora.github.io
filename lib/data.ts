@@ -1,4 +1,4 @@
-import { buildHours, darkWindow, kpAt, summarizeNights, type Hour, type Night } from "./forecast";
+import { buildHours, darkWindow, kpAt, refineOutlook, summarizeNights, type Hour, type Night } from "./forecast";
 import { darknessFactor, kpAlert, OULU, rIndexKp, SPOTS, sunAltitude, visibilityScore } from "./oulu";
 import { ovationNear, parse27Day, parseFmiSeries, parseKpForecast, parseRIndex, parseRtsw, type Point } from "./parse";
 import { withRetry } from "./retry";
@@ -122,6 +122,7 @@ export async function getAuroraData() {
   // Nowcast: global Kp, raised when FMI measures auroral activity right next to Oulu.
   const effectiveKp = Math.max(kpNow, activity?.kp ?? 0);
   const sunAlt = sunAltitude(now, OULU.lat, OULU.lon);
+  const today = now.toISOString().slice(0, 10); // UTC, like the outlook's days
 
   const hours: Hour[] = buildHours({ from: now, count: 72, kpBins, spots: SPOTS, clouds });
   const nights: Night[] = summarizeNights(hours);
@@ -165,7 +166,7 @@ export async function getAuroraData() {
     nights,
     spots,
     kpBins: kpBins.filter((b) => Date.parse(b.start) > now.getTime() - 24 * 3600000),
-    outlook: outlook?.filter((d) => d.date >= now.toISOString().slice(0, 10)) ?? [],
+    outlook: refineOutlook(outlook?.filter((d) => d.date >= today) ?? [], kpBins, { date: today, kp: effectiveKp }),
     wind: { speed: every(speed ?? [], 5), bz: every(bz ?? [], 5) },
     sources: (Object.keys(SOURCES) as SourceId[]).map((id) => ({ id, ...SOURCES[id], status: status[id] ?? "failed" })),
   };

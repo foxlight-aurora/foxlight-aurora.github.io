@@ -17,7 +17,7 @@ export const GLOSSARY = {
     "NOAA's OVATION model: the % chance of aurora directly overhead in the next ~30–90 min. 'Within view' also counts auroras visible low on the northern horizon.",
   sunAlt: "How high the Sun is (negative = below the horizon). Below −12° the sky is dark enough for auroras; above −6° it is too bright.",
   outlook:
-    "NOAA's 4-week forecast of the largest Kp per day, based on the Sun's 27-day rotation: active regions that faced Earth tend to come back. A hint, not a promise.",
+    "NOAA's 4-week forecast of the largest Kp per day, based on the Sun's 27-day rotation: active regions that faced Earth tend to come back. A hint, not a promise. The next few days use NOAA's 3-day forecast instead, which sees storms the outlook can't.",
   kpKind: "Observed = measured. Estimated = preliminary measurement. Predicted = NOAA's forecast.",
 } as const;
 
