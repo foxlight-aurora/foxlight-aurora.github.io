@@ -2,6 +2,7 @@ import type { AuroraData } from "@/lib/data";
 import { nightLabel, outlookHighlights, verdict, type Night, type Verdict } from "@/lib/forecast";
 import { date, day, kp, time, tzName, TONE } from "@/lib/format";
 import { directionsUrl, OULU, scoreLabel, type Tone } from "@/lib/oulu";
+import { InstallApp } from "./InstallApp";
 import { BySpot, SpotSelect } from "./SpotChoice";
 import { Term } from "./Term";
 import { Tiles } from "./Tiles";
@@ -185,11 +186,14 @@ export function Hero({ data }: { data: AuroraData }) {
             Oulu northern lights
           </h1>
         </div>
-        <p className="font-mono text-xs leading-relaxed text-muted sm:text-right sm:text-sm">
-          Updated <b className="font-semibold text-ink">{day(data.generatedAt)}, {time(data.generatedAt)}</b>
-          <br />
-          Times in Oulu ({tzName(data.generatedAt)})
-        </p>
+        <div className="flex flex-col gap-3 sm:items-end">
+          <p className="font-mono text-xs leading-relaxed text-muted sm:text-right sm:text-sm">
+            Updated <b className="font-semibold text-ink">{day(data.generatedAt)}, {time(data.generatedAt)}</b>
+            <br />
+            Times in Oulu ({tzName(data.generatedAt)})
+          </p>
+          <InstallApp />
+        </div>
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">

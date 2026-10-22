@@ -94,7 +94,7 @@ components:
     rounded: "{rounded.pill}"
     padding: "8px 16px"
   spot-select:
-    backgroundColor: "{colors.night-surface}"
+    backgroundColor: "rgb(62 230 168 / 0.1)"
     textColor: "{colors.ink}"
     rounded: "{rounded.inline}"
     padding: "0 0.45em"
@@ -129,7 +129,7 @@ Dark only, by design. People read the site outdoors at night, and a light surfac
 The ground is a cold near-black. The neutrals are blue-tinged slate, and the accent set reads as a signal scale.
 
 ### Primary
-- **Aurora Mint** (aurora-mint): the chance itself. Used for the chance curve and its fill, "great" tone dots (with a soft mint glow), strong-tone status lines, Kp in the facts line, link text, focus outlines (at 60%), hover borders (at 50%), selection, accent and caret color. It is also the brightest band of the background curtain.
+- **Aurora Mint** (aurora-mint): the chance itself. Used for the chance curve and its fill, "great" tone dots (with a soft mint glow), strong-tone status lines, Kp in the facts line, link text, focus outlines (at 60%), hover borders (at 50%), the spot picker chip (10% fill, 45% border), selection, accent and caret color. It is also the brightest band of the background curtain.
 
 ### Secondary
 - **Cloud Slate-Blue** (cloud-blue): cloud cover only. Used for cloud bars under the chart, the clouds fact, cloud numerals in the spot list, the cloud glyph over the aurora arcs, and the chart legend swatch.
@@ -142,7 +142,7 @@ The ground is a cold near-black. The neutrals are blue-tinged slate, and the acc
 - **Night Surface** (night-surface): raised inline controls and tooltips.
 - **Tile Slate** (tile-slate): every card and tile, nearly opaque so the curtain doesn't wash through the data.
 - **Rule** (rule): the 1px borders on cards, chips and dividers, and the hairline gaps between tiles.
-- **Line** (line): chart gridlines, gauge tracks, the spot-select border and the Bz ring.
+- **Line** (line): chart gridlines, gauge tracks and the Bz ring.
 - **Ink** (ink): headings, numerals and primary text.
 - **Muted** (muted): sentences, labels, units and low-tone status.
 - **Faint** (faint): the lowest text tone (≥4.5:1 on the ground). Used for scope tags, axis numbers, footnotes and score digits.
@@ -231,7 +231,7 @@ Every tile follows the same anatomy:
 - **Focus:** border turns mint at 50%, with no outline glow.
 
 ### Inline Spot Picker (signature)
-The spot's name sits inside the sentence as a 0.5em-rounded chip on night surface with a line border and a mint chevron. A transparent native select covers it. Hovering nudges the chevron down 1px and turns the border mint. Keyboard focus draws a mint outline at 40%.
+The spot's name sits inside the sentence as a 0.5em-rounded chip tinted mint (10% fill, 45% border), led by a mint location pin and closed by a bold mint chevron, so it reads as a control and not as more text. A transparent native select covers it. Hovering deepens the fill and border and nudges the chevron down 1px. Keyboard focus draws a mint outline at 40%. Places that only follow the choice (the Next 3 nights heading) show the name as plain ink text, with no chip.
 
 ### Glossary Term
 Technical words get a dotted faint underline (offset 4px) that turns muted on hover and mint on focus. They open a 288px max tooltip on night surface with a 12px radius, clamped to the viewport.
