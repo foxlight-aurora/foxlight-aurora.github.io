@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { hour, kp, time, TONE } from "@/lib/format";
+import { hour, kp, needKp, time, TONE } from "@/lib/format";
 import { scoreLabel } from "@/lib/oulu";
 
 type HourView = { time: string; score: number; kp: number; cloud: number | null };
@@ -14,6 +14,8 @@ export type NightView = {
   end: string;
   limit: "clouds" | "activity";
   minKp: number;
+  /** Moonlight at the night's best hour, 0–1. */
+  moon: number;
   hours: HourView[];
 };
 
@@ -24,6 +26,7 @@ const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
 function summary(n: NightView) {
   if (n.peak >= 15) return `${n.label}: best ${time(n.start)}–${time(n.end)} · ${scoreLabel(n.peak).label} ${n.peak}`;
   if (n.limit === "clouds") return `${n.label}: cloudy — auroras hide behind clouds`;
+  if (n.moon >= 0.1) return `${n.label}: low activity under the moon — this spot needs about Kp ${needKp(n.minKp, n.moon)}+`;
   return `${n.label}: low activity — this spot needs about Kp ${n.minKp}+`;
 }
 

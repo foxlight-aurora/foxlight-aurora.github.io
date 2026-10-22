@@ -55,7 +55,7 @@ describe("buildHours", () => {
 
 describe("summarizeNights", () => {
   it("groups hours into Helsinki-evening nights and finds the peak window", () => {
-    const h = (time: string, score: number) => ({ time, kp: 4, sunAlt: -30, spotId: "dark", score, cloud: 10 });
+    const h = (time: string, score: number) => ({ time, kp: 4, sunAlt: -30, moon: 0, spotId: "dark", score, cloud: 10 });
     const nights = summarizeNights([
       h("2026-12-10T18:00:00Z", 10),
       h("2026-12-10T19:00:00Z", 60),
@@ -75,15 +75,15 @@ describe("summarizeNights", () => {
   });
 
   it("explains a zero night: clouds vs. quiet activity", () => {
-    const cloudy = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 5, sunAlt: -30, spotId: "dark", score: 0, cloud: 100 }]);
-    const quiet = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 0.3, sunAlt: -30, spotId: "dark", score: 0, cloud: 0 }]);
+    const cloudy = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 5, sunAlt: -30, moon: 0, spotId: "dark", score: 0, cloud: 100 }]);
+    const quiet = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 0.3, sunAlt: -30, moon: 0, spotId: "dark", score: 0, cloud: 0 }]);
     expect(cloudy[0].limit).toBe("clouds");
     expect(quiet[0].limit).toBe("activity");
   });
 
   it("judges activity against the spot's own Kp threshold", () => {
     // Kp 3 under a 40% cloud deck: clouds hold back a dark spot, activity holds back the city centre.
-    const hs = [{ time: "2026-12-10T21:00:00Z", kp: 3, sunAlt: -30, spotId: "x", score: 0, cloud: 40 }];
+    const hs = [{ time: "2026-12-10T21:00:00Z", kp: 3, sunAlt: -30, moon: 0, spotId: "x", score: 0, cloud: 40 }];
     expect(summarizeNights(hs, 2)[0].limit).toBe("clouds");
     expect(summarizeNights(hs, 4)[0].limit).toBe("activity");
   });
@@ -103,7 +103,7 @@ describe("darkWindow", () => {
 });
 
 describe("verdict", () => {
-  const night = (peak: number) => ({ date: "2026-12-10", peak, start: "", end: "", spotId: "dark", kp: 3, cloud: 10, limit: "clouds" as const });
+  const night = (peak: number) => ({ date: "2026-12-10", peak, start: "", end: "", spotId: "dark", kp: 3, cloud: 10, moon: 0, limit: "clouds" as const });
   it("says go now when it's dark and the current score is good", () =>
     expect(verdict({ nowScore: 50, sunAlt: -20, tonight: night(10) })).toBe("now"));
   it("ignores a good 'now' score while it's still light", () =>

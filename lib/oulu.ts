@@ -42,14 +42,24 @@ export function kpAlert(kp: number): KpAlert {
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
+const DARKEST_KP = Math.min(...SPOTS.map((s) => s.minKp));
+
+/**
+ * The minKp a spot behaves like under moonlight (`moon` 0–1, see moonlight()). Moonlight adds to the sky's own glow,
+ * and each step of minKp (dark sky → semi-dark shore → city) is about a doubling of sky glow. So a full moon high up
+ * makes a dark spot behave like a semi-dark one (+1 Kp) and costs already-bright spots less.
+ */
+export const moonlitKp = (minKp: number, moon: number) => DARKEST_KP + Math.log2(2 ** (minKp - DARKEST_KP) + moon);
+
 /**
  * Chance (0–1) that auroras show at a spot for a given Kp, before clouds and darkness: an S-curve, even at
  * evenChanceKp, ~12% one Kp below, ~88% one Kp above. Checked against GFZ's Kp record for Sep 2014 – Apr 2025
- * (a full solar cycle): on clear dark nights dark spots average ~1 in 3, semi-dark shores ~1 in 6, which brackets
- * FMI's ~25% for the Oulu area. FMI's R-index lines anchor the same points (see rIndexKp).
+ * (a full solar cycle): on clear dark nights dark spots average ~1 in 3 (29% counting the moon), semi-dark shores
+ * ~1 in 6 (13.5%), which brackets FMI's ~25% for the Oulu area. On the 1 in 8 nights with a bright moon up, dark
+ * spots drop from 30% to 18%. FMI's R-index lines anchor the same points (see rIndexKp).
  */
-export function auroraFactor(kp: number, minKp: number): number {
-  return 1 / (1 + Math.exp(-(kp - evenChanceKp(minKp)) / 0.5));
+export function auroraFactor(kp: number, minKp: number, moon = 0): number {
+  return 1 / (1 + Math.exp(-(kp - evenChanceKp(moonlitKp(minKp, moon))) / 0.5));
 }
 
 /** 0 above -6° (too bright), 1 below -12° (dark), linear in between. */
@@ -57,9 +67,9 @@ export function darknessFactor(sunAlt: number): number {
   return clamp01((-6 - sunAlt) / 6);
 }
 
-export function visibilityScore(p: { kp: number; minKp: number; cloud: number | null; sunAlt: number }): number {
+export function visibilityScore(p: { kp: number; minKp: number; cloud: number | null; sunAlt: number; moon?: number }): number {
   const clear = 1 - (p.cloud ?? 50) / 100;
-  return Math.round(100 * auroraFactor(p.kp, p.minKp) * clear * darknessFactor(p.sunAlt));
+  return Math.round(100 * auroraFactor(p.kp, p.minKp, p.moon) * clear * darknessFactor(p.sunAlt));
 }
 
 export type Tone = "great" | "good" | "maybe" | "low";

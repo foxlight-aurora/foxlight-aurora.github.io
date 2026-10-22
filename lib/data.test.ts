@@ -78,6 +78,33 @@ describe("getAuroraData", () => {
     expect(d.nights.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("asks FMI for a forecast from now, so its cache can't hand back an hours-old answer", async () => {
+    const urls: string[] = [];
+    const fake = healthy();
+    vi.stubGlobal("fetch", async (url: string) => {
+      urls.push(url);
+      const key = Object.keys(fake).find((k) => url.includes(k))!;
+      const body = (fake[key] as () => unknown)();
+      return new Response(typeof body === "string" ? body : JSON.stringify(body), { status: 200 });
+    });
+    await getAuroraData();
+    expect(urls.find((u) => u.includes("fmi::forecast"))).toContain("&starttime=2026-12-10T21:30:00Z");
+  });
+
+  it("uses the current hour's cloud when FMI's answer starts with it", async () => {
+    const H = 3600000;
+    const fromThisHour = () =>
+      SPOTS.map((s) =>
+        Array.from({ length: 72 }, (_, i) => `
+          <BsWfs:BsWfsElement><gml:pos>${s.lat.toFixed(5)} ${s.lon.toFixed(5)} </gml:pos>
+          <BsWfs:Time>${iso(Math.floor(NOW.getTime() / H) * H + (i - 2) * H)}</BsWfs:Time>
+          <BsWfs:ParameterName>TotalCloudCover</BsWfs:ParameterName><BsWfs:ParameterValue>${i === 2 ? 80 : 10}</BsWfs:ParameterValue></BsWfs:BsWfsElement>`).join(""),
+      ).join("");
+    serve({ ...healthy(), "fmi::forecast": fromThisHour });
+    const d = await getAuroraData();
+    expect(d.spots.every((s) => s.cloud === 80)).toBe(true); // not the stale 10% from two hours ago
+  });
+
   it("gives every spot its own nights and dark hours", async () => {
     serve(healthy());
     const d = await getAuroraData();
@@ -106,6 +133,18 @@ describe("getAuroraData", () => {
     it("cloud forecast down", async () => {
       serve({ ...healthy(), "fmi::forecast": "down" });
       await expect(getAuroraData()).rejects.toThrow(/Critical: cloud/);
+    });
+    it("cloud forecast outdated (an old cached answer that no longer covers a day ahead)", async () => {
+      const H = 3600000;
+      const old = () =>
+        SPOTS.map((s) =>
+          Array.from({ length: 30 }, (_, i) => `
+            <BsWfs:BsWfsElement><gml:pos>${s.lat.toFixed(5)} ${s.lon.toFixed(5)} </gml:pos>
+            <BsWfs:Time>${iso(Math.ceil(NOW.getTime() / H) * H + (i - 12) * H)}</BsWfs:Time>
+            <BsWfs:ParameterName>TotalCloudCover</BsWfs:ParameterName><BsWfs:ParameterValue>10</BsWfs:ParameterValue></BsWfs:BsWfsElement>`).join(""),
+        ).join("");
+      serve({ ...healthy(), "fmi::forecast": old });
+      await expect(getAuroraData()).rejects.toThrow(/Critical: cloud forecast missing, short or outdated/);
     });
     it("cloud forecast missing a viewing spot", async () => {
       const all = healthy()["fmi::forecast"] as () => string;

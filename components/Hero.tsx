@@ -1,6 +1,6 @@
 import type { AuroraData } from "@/lib/data";
 import { nightLabel, outlookHighlights, verdict, type Night, type Verdict } from "@/lib/forecast";
-import { date, day, kp, time, tzName, TONE } from "@/lib/format";
+import { date, day, kp, moonWord, needKp, time, tzName, TONE } from "@/lib/format";
 import { directionsUrl, OULU, scoreLabel, type Tone } from "@/lib/oulu";
 import { InstallApp } from "./InstallApp";
 import { BySpot, SpotSelect } from "./SpotChoice";
@@ -88,13 +88,18 @@ function Chance({ value, cloudy }: { value: number; cloudy: boolean }) {
 const darkText = (p: { dark: { start: string; end: string } | null; sunAlt: number }) =>
   p.dark ? (p.sunAlt < -12 ? `Dark until ${time(p.dark.end)}` : `Dark ${time(p.dark.start)}–${time(p.dark.end)}`) : null;
 
-/** Kp, clouds and the dark hours, coloured like the reference's high/low line. Clouds are at the best hour, or now. */
-function Facts({ kpValue, cloud, dark, now = false }: { kpValue: number; cloud: number | null; dark: string | null; now?: boolean }) {
+/**
+ * Kp, clouds, moonlight and the dark hours, coloured like the reference's high/low line. Clouds and moon are at the
+ * best hour, or now. `local`: the Kp is FMI's local nowcast, higher than the global Kp shown in the tiles.
+ */
+function Facts(p: { kpValue: number; cloud: number | null; moon: number; dark: string | null; now?: boolean; local?: boolean }) {
+  const moon = moonWord(p.moon);
   return (
     <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[0.95rem]">
-      <span className="text-great"><Term k="kp">Kp</Term> {kp(kpValue)}</span>
-      <span className="text-cloud">Clouds {pct(cloud)}% {now ? "now" : "at best hour"}</span>
-      {dark && <span className="text-muted">{dark}</span>}
+      <span className="text-great">{p.local ? <Term k="nowcast">Local Kp</Term> : <Term k="kp">Kp</Term>} {kp(p.kpValue)}</span>
+      <span className="text-cloud">Clouds {pct(p.cloud)}% {p.now ? "now" : "at best hour"}</span>
+      {moon && <span className="text-muted"><Term k="moon">{moon}</Term></span>}
+      {p.dark && <span className="text-muted">{p.dark}</span>}
     </p>
   );
 }
@@ -106,13 +111,17 @@ function spotTonight(spot: Spot, night: Night, now: Date, otherwise: React.React
   const later = spot.nights.find((n) => n.date > night.date && n.peak >= 15);
   const then = later ? <> Better chance <b className={B}>{nightLabel(later.date, now).toLowerCase()}</b>, {time(later.start)}–{time(later.end)}.</> : otherwise;
   if (night.limit === "clouds") return ["Clouds will likely hide the sky at ", <> tonight.{then}</>];
-  return ["Too little activity for ", <> tonight: this spot needs about <Term k="kp">Kp</Term> {spot.minKp}+.{then}</>];
+  const moon = night.moon >= 0.1 ? " with tonight's moon" : "";
+  return ["Too little activity for ", <> tonight: this spot needs about <Term k="kp">Kp</Term> {needKp(spot.minKp, night.moon)}+{moon}.{then}</>];
 }
 
 /** Right now at one spot, as the text either side of the spot picker. */
-function spotNow(spot: Spot, best: Spot): [React.ReactNode, React.ReactNode] {
-  if (spot.now >= 35) return ["Auroras are likely right now at ", ". Look north."];
-  const why = (spot.cloud ?? 0) >= 50 ? "clouds are in the way" : <>it needs about <Term k="kp">Kp</Term> {spot.minKp}+</>;
+function spotNow(spot: Spot, best: Spot, moon: number): [React.ReactNode, React.ReactNode] {
+  // The score is roughly a percent chance: "likely" only from Great.
+  if (spot.now >= 60) return ["Auroras are likely right now at ", ". Look north."];
+  if (spot.now >= 35) return ["Good chance of auroras right now at ", ". Look north."];
+  const why = (spot.cloud ?? 0) >= 50 ? "clouds are in the way"
+    : <>it needs about <Term k="kp">Kp</Term> {needKp(spot.minKp, moon)}+{moon >= 0.1 ? " with the moon up" : ""}</>;
   return ["Weaker right now at ", <>: {why}. Best now is <b className={B}>{best.name}</b> ({best.now}).</>];
 }
 
@@ -150,12 +159,12 @@ export function Hero({ data }: { data: AuroraData }) {
         <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
       </>
     );
-    facts = by((s, n) => <Facts kpValue={n.kp} cloud={n.cloud} dark={darkText(s)} />);
+    facts = by((s, n) => <Facts kpValue={n.kp} cloud={n.cloud} moon={n.moon} dark={darkText(s)} />);
     go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
   } else if (v === "now") {
     // Right now at each spot; the picker starts at the best one, and a weaker pick points back to it.
     const by = (f: (s: Spot) => React.ReactNode) => <BySpot views={Object.fromEntries(data.spots.map((s) => [s.id, f(s)]))} />;
-    const text = Object.fromEntries(data.spots.map((s) => [s.id, spotNow(s, bestNow)]));
+    const text = Object.fromEntries(data.spots.map((s) => [s.id, spotNow(s, bestNow, data.now.moon.light)]));
     title = by((s) => (s.now >= 35 ? TITLE.now : "Better elsewhere now"));
     figure = by((s) => <Chance value={s.now} cloudy={(s.cloud ?? 0) >= 50 && s.now < 35} />);
     sentence = (
@@ -165,7 +174,7 @@ export function Hero({ data }: { data: AuroraData }) {
         <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
       </>
     );
-    facts = by((s) => <Facts kpValue={data.now.effectiveKp} cloud={s.cloud} dark={darkText(s)} now />);
+    facts = by((s) => <Facts kpValue={data.now.effectiveKp} cloud={s.cloud} moon={data.now.moon.light} dark={darkText(s)} now local={data.now.driver === "fmi"} />);
     go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
   } else {
     // Too bright: no night ahead to show.

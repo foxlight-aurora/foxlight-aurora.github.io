@@ -38,7 +38,7 @@ const FAQ = [
   ],
   [
     "How does this forecast work?",
-    "It combines NOAA's Kp forecast and real-time solar wind with FMI's local auroral activity (R-index), the FMI cloud forecast and the position of the sun into a chance for each viewing spot, refreshed several times an hour. It is a forecast, not a promise.",
+    "It combines NOAA's Kp forecast and real-time solar wind with FMI's local auroral activity (R-index), the FMI cloud forecast and the positions of the sun and moon into a chance for each viewing spot, refreshed several times an hour. It is a forecast, not a promise.",
   ],
 ];
 

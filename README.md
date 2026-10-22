@@ -29,11 +29,16 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   them, so an external timer triggers the same workflow on the same pattern (see [Reliable refresh](#reliable-refresh)).
   Open pages check `data.json` and reload when a newer build is live.
 - **Visibility model** — `lib/oulu.ts`:
-  `chance = 100 × activity(Kp, spot.minKp) × (1 − clouds) × darkness(sun altitude)`.
+  `chance = 100 × activity(Kp, spot.minKp, moonlight) × (1 − clouds) × darkness(sun altitude)`.
   Activity is a logistic curve, even at `minKp + 0.25` with a 0.5 Kp scale; spots have an even chance from Kp 3+
   (dark sky), 4+ (semi-dark shore) or 5+ (city lights). Calibrated to FMI's statistic that auroras show on ~25% of
   clear, dark nights around Oulu: over Sep 2014 – Apr 2025 (GFZ Kp), dark spots average ~34 on clear dark nights,
   semi-dark ~16. Alerts follow the same points: Kp 3+ → "Activity reaches dark spots", 5+ → "reaches the city centre".
+- **Moonlight** — `lib/moon.ts` gives the moon's altitude and phase (within 0.3° and 1% of JPL Horizons) and a
+  0–1 moonlight from Allen's phase law (a half moon ≈ a tenth of a full one), fading below 30° altitude. It adds to
+  the sky's own glow, each minKp step being about a doubling of glow (`moonlitKp`): a full moon high up turns a dark
+  spot into a semi-dark one (+1 Kp) and costs brighter spots less. Backtested on GFZ Kp 2014–2025: dark spots 31.7%
+  → 29.0% of clear dark nights overall, 29.6% → 18.5% on the nights with a bright moon up.
 - **Nowcast** — Kp is raised by FMI's R-index from Oulujärvi and Ranua (either side of Oulu), FMI's own 5-minute
   auroral activity index with per-station thresholds (yellow = 50% chance of weak auroras → even chance at dark
   spots, red = 50% chance of strong auroras → even chance in the city). It catches local substorms the global

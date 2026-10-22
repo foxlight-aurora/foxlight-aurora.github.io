@@ -1,4 +1,5 @@
 // Combines Kp forecast, cloud forecast and darkness into hourly scores and per-night summaries.
+import { moonAt, moonlight } from "./moon";
 import { auroraFactor, darknessFactor, OULU, SPOTS, sunAltitude, visibilityScore, type Spot } from "./oulu";
 import type { KpBin, Point } from "./parse";
 
@@ -10,7 +11,8 @@ export function kpAt(bins: KpBin[], t: Date): number | null {
   return bin?.kp ?? null;
 }
 
-export type Hour = { time: string; kp: number; sunAlt: number; spotId: string; score: number; cloud: number | null };
+/** `moon`: how much moonlight brightens the sky that hour, 0–1 (see moonlight()). */
+export type Hour = { time: string; kp: number; sunAlt: number; moon: number; spotId: string; score: number; cloud: number | null };
 
 export function buildHours(p: {
   from: Date;
@@ -29,12 +31,13 @@ export function buildHours(p: {
     // An hour is shown as a whole (06:00–07:00), and at twilight the sun moves several degrees in it: judge
     // darkness at the middle of the hour, not its start, and at the spot itself (Hailuoto sees dark minutes later).
     const mid = new Date(t.getTime() + HOUR / 2);
+    const moon = Math.round(moonlight(moonAt(mid, OULU.lat, OULU.lon)) * 100) / 100; // the same over all spots
     let best: Hour | null = null;
     for (const spot of p.spots) {
       const sunAlt = sunAltitude(mid, spot.lat, spot.lon);
       const cloud = p.clouds[spot.id]?.find((c) => c.time === iso)?.value ?? null;
-      const score = visibilityScore({ kp, minKp: spot.minKp, cloud, sunAlt });
-      if (!best || score > best.score) best = { time: iso, kp, sunAlt, spotId: spot.id, score, cloud };
+      const score = visibilityScore({ kp, minKp: spot.minKp, cloud, sunAlt, moon });
+      if (!best || score > best.score) best = { time: iso, kp, sunAlt, moon, spotId: spot.id, score, cloud };
     }
     if (best) hours.push(best);
   }
@@ -50,7 +53,9 @@ export type Night = {
   spotId: string;
   kp: number;
   cloud: number | null;
-  /** What holds the night back most. */
+  /** Moonlight at the best hour, 0–1. */
+  moon: number;
+  /** What holds the night back most. Moonlight counts as activity: it raises the activity needed. */
   limit: "clouds" | "activity";
 };
 
@@ -84,7 +89,8 @@ export function summarizeNights(hours: Hour[], minKp = DARKEST_MIN_KP): Night[] 
       spotId: peak.spotId,
       kp: Math.max(...hs.map((h) => h.kp)),
       cloud: peak.cloud,
-      limit: clear < auroraFactor(peak.kp, minKp) ? "clouds" : "activity",
+      moon: peak.moon,
+      limit: clear < auroraFactor(peak.kp, minKp, peak.moon) ? "clouds" : "activity",
     };
   });
 }

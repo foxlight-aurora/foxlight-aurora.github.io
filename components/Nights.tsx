@@ -20,6 +20,7 @@ export function Nights({ data }: { data: AuroraData }) {
       end: n.end,
       limit: n.limit,
       minKp: s.minKp,
+      moon: n.moon,
       hours: s.hours
         .filter((h) => nightOf(h.time) === n.date && h.sunAlt < -6)
         .map(({ time, score, kp, cloud }) => ({ time, score, kp, cloud })),

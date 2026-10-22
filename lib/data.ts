@@ -1,4 +1,5 @@
 import { buildHours, darkWindow, kpAt, refineOutlook, summarizeNights, type Hour, type Night } from "./forecast";
+import { moonAt, moonlight } from "./moon";
 import { darknessFactor, kpAlert, OULU, rIndexKp, SPOTS, sunAltitude, visibilityScore } from "./oulu";
 import { ovationNear, parse27Day, parseFmiSeries, parseKpForecast, parseRIndex, parseRtsw, type Point } from "./parse";
 import { withRetry } from "./retry";
@@ -67,7 +68,10 @@ export type AuroraData = Awaited<ReturnType<typeof getAuroraData>>;
 export async function getAuroraData() {
   const now = new Date();
   const status: Record<string, SourceStatus> = {};
-  const cloudQuery = SPOTS.map((s) => `latlon=${s.lat},${s.lon}`).join("&");
+  // FMI's cache keeps an answer for up to 6 hours per exact URL (and per compression), long after newer forecast runs
+  // are out. A starttime that changes every 10 minutes gives each build its own URL, so the answer is current.
+  const startTime = new Date(Math.floor(now.getTime() / 600000) * 600000).toISOString().replace(".000", "");
+  const cloudQuery = `${SPOTS.map((s) => `latlon=${s.lat},${s.lon}`).join("&")}&starttime=${startTime}`;
 
   const [kpBins, cloudSeries, rIndex, speed, bz, ovation, outlook] = await Promise.all([
     safe("kp", async () => parseKpForecast(await get(SOURCES.kp.url, "json")), status),
@@ -86,12 +90,15 @@ export async function getAuroraData() {
   const kpNow = kpBins ? kpAt(kpBins, now) : null;
   if (!kpBins || kpNow === null) throw new Error("Critical: Kp forecast unavailable or does not cover the current time");
 
-  // FMI's forecast starts at the next full hour; reuse it for the current hour.
+  // FMI's forecast starts at the next full hour; reuse it for the current hour. Hours already past (an outdated
+  // answer) are dropped, so an old forecast fails the length check instead of passing as current.
   const clouds: Record<string, Point[]> = {};
+  const thisHour = hourIso(now.getTime());
   for (const spot of SPOTS) {
     const s = cloudSeries?.find((x) => Math.abs(x.lat - spot.lat) < 0.01 && Math.abs(x.lon - spot.lon) < 0.01);
-    if (!s || s.points.length < 24) throw new Error(`Critical: cloud forecast missing or short for ${spot.name}`);
-    clouds[spot.id] = [{ time: hourIso(now.getTime()), value: s.points[0].value }, ...s.points];
+    const points = s?.points.filter((p) => p.time >= thisHour) ?? [];
+    if (points.length < 24) throw new Error(`Critical: cloud forecast missing, short or outdated for ${spot.name}`);
+    clouds[spot.id] = points[0].time === thisHour ? points : [{ time: thisHour, value: points[0].value }, ...points];
   }
   const cloudNow = (id: string) => clouds[id][0].value;
 
@@ -122,6 +129,8 @@ export async function getAuroraData() {
   // Nowcast: global Kp, raised when FMI measures auroral activity right next to Oulu.
   const effectiveKp = Math.max(kpNow, activity?.kp ?? 0);
   const sunAlt = sunAltitude(now, OULU.lat, OULU.lon);
+  const moonNow = moonAt(now, OULU.lat, OULU.lon);
+  const moon = Math.round(moonlight(moonNow) * 100) / 100;
   const today = now.toISOString().slice(0, 10); // UTC, like the outlook's days
 
   const hours: Hour[] = buildHours({ from: now, count: 72, kpBins, spots: SPOTS, clouds });
@@ -133,7 +142,7 @@ export async function getAuroraData() {
     return {
       ...spot,
       cloud: cloudNow(spot.id),
-      now: visibilityScore({ kp: effectiveKp, minKp: spot.minKp, cloud: cloudNow(spot.id), sunAlt }),
+      now: visibilityScore({ kp: effectiveKp, minKp: spot.minKp, cloud: cloudNow(spot.id), sunAlt, moon }),
       // Darkness at the spot itself (a few minutes apart across the area).
       sunAlt: sunAltitude(now, spot.lat, spot.lon),
       dark: darkWindow(now, spot),
@@ -154,6 +163,8 @@ export async function getAuroraData() {
       driver: activity && activity.kp > kpNow ? ("fmi" as const) : ("kp" as const),
       alert: kpAlert(effectiveKp),
       sunAlt,
+      /** The moon now: altitude (°), illuminated fraction, and how much it brightens the sky (0–1). */
+      moon: { alt: Math.round(moonNow.alt), illum: Math.round(moonNow.illum * 100) / 100, light: moon },
       dark: darkWindow(now),
       speed: speedNow,
       bz: bzNow,

@@ -1,4 +1,4 @@
-import { OULU, type Tone } from "./oulu";
+import { moonlitKp, OULU, type Tone } from "./oulu";
 
 const tz = OULU.tz;
 const hm = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: tz });
@@ -27,3 +27,12 @@ export const TONE: Record<Tone, { text: string; bg: string; dot: string }> = {
 const tzFmt = new Intl.DateTimeFormat("en-GB", { timeZone: tz, timeZoneName: "short" });
 /** "EEST" or "EET": Oulu's time zone at that moment. */
 export const tzName = (iso: string) => tzFmt.formatToParts(new Date(iso)).find((p) => p.type === "timeZoneName")?.value ?? "Oulu time";
+
+/** The Kp a spot needs for an even chance, given the moonlight (0–1): "3", or "3.6" when the moon raises it. */
+export const needKp = (minKp: number, moon: number) => {
+  const k = Math.round(moonlitKp(minKp, moon) * 10) / 10;
+  return Number.isInteger(k) ? String(k) : k.toFixed(1);
+};
+
+/** A word for noticeable moonlight, or null when it hardly matters. */
+export const moonWord = (moon: number) => (moon >= 0.3 ? "Bright moon" : moon >= 0.1 ? "Moonlit" : null);

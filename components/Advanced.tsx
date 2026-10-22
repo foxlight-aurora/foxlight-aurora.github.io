@@ -47,6 +47,7 @@ export function Advanced({ data }: { data: AuroraData }) {
     ["ov1", <><Term k="ovation">OVATION</Term> probability overhead</>, n.ovation ? `${n.ovation.overhead}%` : "–"],
     ["ov2", <><Term k="ovation">OVATION</Term> max within view (north)</>, n.ovation ? `${n.ovation.inView}%` : "–"],
     ["sun", <Term key="s" k="sunAlt">Sun altitude</Term>, `${n.sunAlt.toFixed(1)}°`],
+    ["moon", <Term key="m" k="moon">Moon</Term>, `${Math.round(n.moon.illum * 100)}% lit, ${n.moon.alt}° up · moonlight ${n.moon.light.toFixed(2)}`],
   ];
 
   return (
@@ -85,13 +86,15 @@ export function Advanced({ data }: { data: AuroraData }) {
                 roughly 1 in 4 clear, dark nights.
               </p>
               <p className="font-mono text-xs text-faint">
-                chance = 100 × activity(Kp) × (1 − clouds) × darkness(sun altitude)
+                chance = 100 × activity(Kp, moon) × (1 − clouds) × darkness(sun altitude)
               </p>
               <p>
                 Activity is an S-curve: even at the spot&apos;s Kp, ~12% one Kp below, ~88% one above. Checked against
                 every dark night from 2014 to 2025 (a full solar cycle of measured Kp), dark spots average about 1 in 3
-                clear nights, in line with FMI. Darkness ramps from 0 at −6° to 1 at −12°, taken at the middle of each
-                hour. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line = 50%
+                clear nights, in line with FMI. Moonlight raises the Kp a spot needs: a full moon high up adds about 1 Kp at
+                dark spots (like a spot near town) and less where city light already dominates; a half moon gives about a
+                tenth of that. On bright-moon nights this takes dark spots from about 30% to 18%. Darkness ramps from 0 at
+                −6° to 1 at −12°, taken at the middle of each hour. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line = 50%
                 chance of weak auroras ≈ even chance at dark spots; red line = 50% chance of strong ones ≈ even chance in
                 town), because local substorms show up there minutes after they start — long before the global 3-hour
                 Kp. Live readings older than 30 minutes are never shown as &ldquo;now&rdquo;.

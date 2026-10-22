@@ -15,6 +15,7 @@ export const GLOSSARY = {
     "Our estimate of activity over Oulu right now: the higher of the global Kp and FMI's local R-index (converted: yellow line ≈ even chance at dark spots, Kp 3+; red line ≈ even chance in town, Kp 5+).",
   ovation:
     "NOAA's OVATION model: the % chance of aurora directly overhead in the next ~30–90 min. 'Within view' also counts auroras visible low on the northern horizon.",
+  moon: "Moonlight brightens the sky and hides faint auroras; strong ones still show. The chance counts the moon's phase and height: a full moon high up makes a dark spot need about 1 Kp more, like a spot near town.",
   sunAlt: "How high the Sun is (negative = below the horizon). Below −12° the sky is dark enough for auroras; above −6° it is too bright.",
   outlook:
     "NOAA's 4-week forecast of the largest Kp per day, based on the Sun's 27-day rotation: active regions that faced Earth tend to come back. A hint, not a promise. The next few days use NOAA's 3-day forecast instead, which sees storms the outlook can't.",
