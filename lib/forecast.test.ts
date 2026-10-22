@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHours, darkWindow, kpAt, nightLabel, outlookHighlights, refineOutlook, summarizeNights, verdict } from "./forecast";
-import { sunAltitude, type Spot } from "./oulu";
+import { sunAltitude, visibilityScore, type Spot } from "./oulu";
 
 const bins = [
   { start: "2026-12-10T18:00:00Z", kp: 1, kind: "predicted" as const, scale: null },
@@ -36,6 +36,19 @@ describe("buildHours", () => {
     expect(hours[0]).toMatchObject({ time: "2026-12-10T21:00:00Z", kp: 4, spotId: "city", score: 8, cloud: 0 });
     // second hour has no cloud data → unknown (50%) everywhere, dark spot wins on Kp
     expect(hours[1]).toMatchObject({ spotId: "dark", score: 41, cloud: null });
+  });
+
+  it("starts from the activity measured now and hands over to NOAA's forecast within 3 hours", () => {
+    const flat = Array.from({ length: 3 }, (_, i) => ({ start: `2026-12-10T${String(18 + 3 * i).padStart(2, "0")}:00:00Z`, kp: 4, kind: "predicted" as const, scale: null }));
+    const hours = buildHours({ from: new Date("2026-12-10T18:40:00Z"), count: 5, kpBins: flat, spots: [spots[1]], clouds: {}, nowKp: 2.5 });
+    expect(hours.map((h) => h.kp)).toEqual([2.5, 3, 3.5, 4, 4]);
+  });
+
+  it("makes the current hour agree with the score for now", () => {
+    const at = new Date("2026-12-10T21:20:00Z");
+    const [h] = buildHours({ from: at, count: 1, kpBins: bins, spots: [spots[1]], clouds: { dark: [{ time: "2026-12-10T21:00:00Z", value: 20 }] }, nowKp: 3.1 });
+    const now = visibilityScore({ kp: 3.1, minKp: spots[1].minKp, cloud: 20, sunAlt: sunAltitude(at, spots[1].lat, spots[1].lon), moon: h.moon });
+    expect(Math.abs(h.score - now)).toBeLessThanOrEqual(1);
   });
 
   it("judges a twilight hour by the sun at its middle, not its start", () => {

@@ -133,11 +133,11 @@ export async function getAuroraData() {
   const moon = Math.round(moonlight(moonNow) * 100) / 100;
   const today = now.toISOString().slice(0, 10); // UTC, like the outlook's days
 
-  const hours: Hour[] = buildHours({ from: now, count: 72, kpBins, spots: SPOTS, clouds });
+  const hours: Hour[] = buildHours({ from: now, count: 72, kpBins, spots: SPOTS, clouds, nowKp: effectiveKp });
   const nights: Night[] = summarizeNights(hours);
 
   const spots = SPOTS.map((spot) => {
-    const spotHours = buildHours({ from: now, count: 72, kpBins, spots: [spot], clouds });
+    const spotHours = buildHours({ from: now, count: 72, kpBins, spots: [spot], clouds, nowKp: effectiveKp });
     const spotNights = summarizeNights(spotHours, spot.minKp);
     return {
       ...spot,

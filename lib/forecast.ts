@@ -14,19 +14,30 @@ export function kpAt(bins: KpBin[], t: Date): number | null {
 /** `moon`: how much moonlight brightens the sky that hour, 0–1 (see moonlight()). */
 export type Hour = { time: string; kp: number; sunAlt: number; moon: number; spotId: string; score: number; cloud: number | null };
 
+/** Hours over which the measured activity hands over to NOAA's forecast: all measured now, all forecast from +3 h. */
+const HANDOVER_HOURS = 3;
+
+/**
+ * Hourly scores from `from`'s hour on. `nowKp`, the activity measured now (the nowcast), sets the current hour, so it
+ * agrees with "now", and blends into NOAA's forecast over the next hours: a reading from minutes ago says more about
+ * the next hour or two than a 3-hour forecast issued hours earlier.
+ */
 export function buildHours(p: {
   from: Date;
   count: number;
   kpBins: KpBin[];
   spots: Spot[];
   clouds: Record<string, Point[]>;
+  nowKp?: number;
 }): Hour[] {
   const start = Math.floor(p.from.getTime() / HOUR) * HOUR;
   const hours: Hour[] = [];
   for (let i = 0; i < p.count; i++) {
     const t = new Date(start + i * HOUR);
-    const kp = kpAt(p.kpBins, t);
-    if (kp === null) continue;
+    const forecast = kpAt(p.kpBins, t);
+    if (forecast === null) continue;
+    const w = p.nowKp === undefined ? 0 : Math.max(0, 1 - i / HANDOVER_HOURS);
+    const kp = Math.round((w * (p.nowKp ?? 0) + (1 - w) * forecast) * 100) / 100;
     const iso = t.toISOString().replace(".000", "");
     // An hour is shown as a whole (06:00–07:00), and at twilight the sun moves several degrees in it: judge
     // darkness at the middle of the hour, not its start, and at the spot itself (Hailuoto sees dark minutes later).
