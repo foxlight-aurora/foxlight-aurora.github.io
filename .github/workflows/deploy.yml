@@ -5,7 +5,7 @@ on:
     branches: [main]
   # Times are UTC. Every 10 min while it can be dark in Oulu (16:00–08:59 Finnish summer time), hourly in daylight.
   # Off the hour because GitHub delays busy slots. GitHub runs schedules late or not at all, so an external timer
-  # also triggers workflow_dispatch on the same pattern (see README); overlapping runs are fine (concurrency below).
+  # also triggers workflow_dispatch on the same pattern (see README); overlapping runs queue (concurrency below).
   schedule:
     - cron: "3-59/10 13-23 * * *"
     - cron: "3-59/10 0-5 * * *"
@@ -17,13 +17,17 @@ permissions:
   pages: write
   id-token: write
 
+# One run at a time, and a run in progress always finishes: a newer run waits (and then fetches the newest data)
+# instead of cancelling it. Cancelling in progress let back-to-back runs cancel every deploy for half an hour.
+# The timeouts stop a stuck run from holding up the next one.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -45,6 +49,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -27,7 +27,9 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
 - **Scheduled rebuilds** — `.github/workflows/deploy.yml` runs tests, builds and deploys on every push, every 10 min
   from 13:00 to 05:59 UTC (when it can be dark in Oulu) and hourly otherwise. GitHub runs schedules late or skips
   them, so an external timer triggers the same workflow on the same pattern (see [Reliable refresh](#reliable-refresh)).
-  Open pages check `data.json` and reload when a newer build is live.
+  Open pages check `version.json` at once when opened, brought back or back online, and every 2 minutes while open,
+  and load a newer build under a one-off address so neither GitHub's CDN nor the browser (10-minute caches) can serve
+  the old one. Runs queue rather than cancel each other, with timeouts, so one stuck deploy can't block updates.
 - **Visibility model** — `lib/oulu.ts`:
   `chance = 100 × activity(Kp, spot.minKp, moonlight) × (1 − clouds) × darkness(sun altitude)`.
   Activity is a logistic curve, even at `minKp + 0.25` with a 0.5 Kp scale; spots have an even chance from Kp 3+
