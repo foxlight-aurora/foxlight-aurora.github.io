@@ -99,6 +99,7 @@ export function parseRIndex(fig: RIndexFig) {
     .sort((a, b) => a.time - b.time);
   if (!pts.length) throw new Error("R-index: no data");
   const latest = pts[pts.length - 1].time;
-  const r = Math.max(...pts.filter((p) => p.time > latest - 15 * 60000).map((p) => p.r));
-  return { yellow, red, r: Math.round(r), time: iso(latest) };
+  const maxSince = (min: number) => Math.round(Math.max(...pts.filter((p) => p.time > latest - min * 60000).map((p) => p.r)));
+  // r: the latest 15 minutes, to react fast; rRecent: the latest 45, so a short lull doesn't count as quiet.
+  return { yellow, red, r: maxSince(15), rRecent: maxSince(45), time: iso(latest) };
 }

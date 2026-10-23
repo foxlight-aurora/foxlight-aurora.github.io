@@ -3,7 +3,7 @@
 // never fails: a false alarm here would hold back a correct site.
 import type { AuroraData } from "./data";
 import { kpAt, nightOf } from "./forecast";
-import { rIndexKp, visibilityScore } from "./oulu";
+import { nowcastKp, rIndexKp, visibilityScore } from "./oulu";
 
 const RAD = Math.PI / 180;
 
@@ -41,10 +41,12 @@ export function verifySnapshot(d: AuroraData): string[] {
       errors.push(`${s.name}: a score is not a whole number from 0 to 100`);
   }
 
-  // Kp now is NOAA's 3-hour value, and the nowcast the higher of it and FMI's live local activity.
+  // Kp now is NOAA's 3-hour value, and the nowcast follows from it and FMI's live local activity.
   const kp = kpAt(d.kpBins, at);
   if (kp !== d.now.kp) errors.push(`Kp now: NOAA's 3-hour value is ${kp}, the snapshot says ${d.now.kp}`);
-  const nowcast = Math.max(d.now.kp, ...d.now.stations.filter((s) => !s.stale).map((s) => rIndexKp(s.r, s.yellow, s.red)));
+  const live = d.now.stations.filter((s) => !s.stale);
+  const localKp = (r: (s: (typeof live)[number]) => number) => Math.max(...live.map((s) => rIndexKp(r(s), s.yellow, s.red)));
+  const nowcast = nowcastKp(d.now.kp, live.length ? { now: localKp((s) => s.r), recent: localKp((s) => s.rRecent) } : null);
   if (Math.abs(nowcast - d.now.effectiveKp) > 0.01) errors.push(`Nowcast: Kp and the R-index give ${nowcast.toFixed(2)}, the snapshot says ${d.now.effectiveKp.toFixed(2)}`);
 
   // The sun, by an independent formula (the site's is accurate to ~0.1°).

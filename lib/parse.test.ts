@@ -95,12 +95,13 @@ describe("parseRIndex (FMI R-index Plotly JSON)", () => {
 
   it("reads thresholds and the strongest R in the latest 15 minutes", () => {
     const r = parseRIndex(fig([
-      ["2026-10-01T20:30:00+00:00", 150], // older than 15 min before the latest → ignored
+      ["2026-10-01T20:00:00+00:00", 190], // older than 45 min before the latest → ignored
+      ["2026-10-01T20:30:00+00:00", 150], // older than 15 min: only in rRecent
       ["2026-10-01T20:50:00+00:00", 99],
       ["2026-10-01T20:55:00+00:00", 120],
       ["2026-10-01T21:00:00+00:00", 80],
     ]));
-    expect(r).toEqual({ yellow: 68, red: 200, r: 120, time: "2026-10-01T21:00:00Z" });
+    expect(r).toEqual({ yellow: 68, red: 200, r: 120, rRecent: 150, time: "2026-10-01T21:00:00Z" });
   });
   it("skips data gaps (null) instead of reading them as zero", () => {
     const r = parseRIndex(fig([["2026-10-01T20:55:00+00:00", 90], ["2026-10-01T21:00:00+00:00", null]]));

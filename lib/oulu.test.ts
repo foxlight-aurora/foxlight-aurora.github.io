@@ -5,6 +5,7 @@ import {
   DARK_KP,
   darknessFactor,
   kpAlert,
+  nowcastKp,
   rIndexKp,
   scoreLabel,
   sunAltitude,
@@ -14,6 +15,7 @@ import {
   rankSpots,
   directionsUrl,
   distanceKm,
+  SPOTS,
 } from "./oulu";
 
 describe("sunAltitude (Oulu 65.01°N)", () => {
@@ -147,5 +149,29 @@ describe("directionsUrl without an origin", () => {
     expect(directionsUrl(null, { lat: 65.03, lon: 25.412 })).toBe(
       "https://www.google.com/maps/dir/?api=1&destination=65.03,25.412",
     );
+  });
+});
+
+describe("nowcastKp", () => {
+  const quiet = (k: number) => ({ now: k, recent: k });
+  it("uses the global Kp when there's no fresh local reading", () => expect(nowcastKp(4.33, null)).toBe(4.33));
+  it("lets stronger local activity win at once (a substorm the 3-hour Kp hasn't caught)", () =>
+    expect(nowcastKp(2, { now: 4.5, recent: 3 })).toBe(4.5));
+  it("pulls a global Kp down towards stations quiet for 45 minutes, allowing 1 Kp for auroras further north", () => {
+    expect(nowcastKp(3.67, quiet(1.58))).toBeCloseTo(2.58, 10); // 23 Oct, 03:30: Kp 3.7 but Ranua at 34 nT
+  });
+  it("doesn't count a short lull as quiet", () => {
+    expect(nowcastKp(3.67, { now: 2.78, recent: 3.84 })).toBe(3.67); // 22 Oct, 19:55: activity pulsing
+  });
+  it("never goes above an even chance at dark spots while the stations stay below yellow", () => {
+    expect(nowcastKp(5.67, quiet(3.0))).toBe(DARK_KP);
+  });
+  it("allows the global Kp up to 1 above active stations", () => expect(nowcastKp(6, quiet(3.6))).toBeCloseTo(4.6, 10));
+  it("never says 'likely' (60+) anywhere while FMI's stations see no activity, whatever the global Kp", () => {
+    for (let r = 0; r < 68; r += 1)
+      for (let kp = 0; kp <= 9; kp += 0.33) {
+        const k = nowcastKp(kp, quiet(rIndexKp(r, 68, 200)));
+        for (const s of SPOTS) expect(visibilityScore({ kp: k, minKp: s.minKp, cloud: 0, sunAlt: -30, moon: 0 })).toBeLessThan(60);
+      }
   });
 });

@@ -41,10 +41,12 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   the sky's own glow, each minKp step being about a doubling of glow (`moonlitKp`): a full moon high up turns a dark
   spot into a semi-dark one (+1 Kp) and costs brighter spots less. Backtested on GFZ Kp 2014–2025: dark spots 31.7%
   → 29.0% of clear dark nights overall, 29.6% → 18.5% on the nights with a bright moon up.
-- **Nowcast** — Kp is raised by FMI's R-index from Oulujärvi and Ranua (either side of Oulu), FMI's own 5-minute
-  auroral activity index with per-station thresholds (yellow = 50% chance of weak auroras → even chance at dark
-  spots, red = 50% chance of strong auroras → even chance in the city). It catches local substorms the global
-  3-hour Kp misses.
+- **Nowcast** — `nowcastKp` (`lib/oulu.ts`) checks Kp against FMI's R-index from Oulujärvi and Ranua (either side of
+  Oulu), FMI's own 5-minute auroral activity index with per-station thresholds (yellow = 50% chance of weak auroras →
+  even chance at dark spots, red = 50% chance of strong auroras → even chance in the city). Local activity above Kp
+  wins (a substorm the 3-hour Kp hasn't caught yet). When the stations are quieter, Kp counts for at most 1 more than
+  they show (auroras further north seen low on the horizon), and below yellow never more than an even chance at dark
+  spots, so "likely" is never shown while FMI sees no activity. Without fresh readings (< 30 min) Kp is used as is.
 - **Forecast** — `lib/forecast.ts` scores 72 hours per spot, groups them into nights and finds each night's best window.
   The current hour uses the measured nowcast (so it agrees with "now"), handing over to NOAA's Kp forecast
   linearly within 3 hours.

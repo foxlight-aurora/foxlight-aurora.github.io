@@ -106,6 +106,18 @@ describe("getAuroraData", () => {
     expect(d.spots.every((s) => s.cloud === 80)).toBe(true); // not the stale 10% from two hours ago
   });
 
+  it("brings 'now' down when FMI's stations next to Oulu are quiet but the 3-hour Kp is still raised", async () => {
+    const fake = healthy();
+    const kpRows = fake["noaa-planetary-k-index-forecast"] as () => { kp: number }[];
+    serve({ ...fake, "noaa-planetary-k-index-forecast": () => kpRows().map((r) => ({ ...r, kp: 3.67 })), "r-index/api": () => rIndexFig(23, minAgo(5)) });
+    const d = await getAuroraData();
+    expect(d.now.kp).toBe(3.67);
+    expect(d.now.effectiveKp).toBeLessThan(2.5); // 23 nT is about a third of yellow: local Kp ~1.1, plus 1
+    expect(d.now.driver).toBe("fmi");
+    expect(Math.max(...d.spots.map((s) => s.now))).toBeLessThan(35);
+    expect(verifySnapshot(d)).toEqual([]);
+  });
+
   it("gives every spot its own nights and dark hours", async () => {
     serve(healthy());
     const d = await getAuroraData();

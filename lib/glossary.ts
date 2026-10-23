@@ -12,7 +12,7 @@ export const GLOSSARY = {
   rIndex:
     "FMI's real-time auroral activity index, measured every 5 minutes by magnetometers next to Oulu. Above the yellow line there's a 50% chance of weak auroras, above the red line a 50% chance of strong ones.",
   nowcast:
-    "Our estimate of activity over Oulu right now: the higher of the global Kp and FMI's local R-index (converted: yellow line ≈ even chance at dark spots, Kp 3+; red line ≈ even chance in town, Kp 5+).",
+    "Our estimate of activity over Oulu right now: the global Kp, checked against FMI's R-index measured next to Oulu every 5 minutes. Local activity above Kp wins; when the stations are quiet, Kp counts for at most 1 more than they show, and never more than an even chance at dark spots.",
   ovation:
     "NOAA's OVATION model: the % chance of aurora directly overhead in the next ~30–90 min. 'Within view' also counts auroras visible low on the northern horizon.",
   moon: "Moonlight brightens the sky and hides faint auroras; strong ones still show. The chance counts the moon's phase and height: a full moon high up makes a dark spot need about 1 Kp more, like a spot near town.",

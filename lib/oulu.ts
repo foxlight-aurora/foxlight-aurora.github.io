@@ -93,6 +93,22 @@ export function rIndexKp(r: number, yellow: number, red: number): number {
   return (DARK_KP * Math.max(0, r)) / yellow;
 }
 
+/**
+ * The Kp to use for "now": NOAA's global Kp, checked against FMI's fresh local reading (null when there is none; both
+ * values from rIndexKp). Kp is a 3-hour global average; the R-index is measured every 5 minutes right next to Oulu.
+ * - Local activity in the latest 15 minutes (`now`) above the global Kp wins: a substorm the 3-hour Kp hasn't seen.
+ * - Otherwise the global Kp counts for at most 1 Kp more than the stations showed in the latest 45 minutes (`recent`),
+ *   for auroras further north seen low on the horizon. The longer window keeps a short lull from flipping the score.
+ * - With the stations below FMI's yellow line all that time (under a 50% chance of weak auroras there), never more than
+ *   an even chance at dark spots, so the page can't say "likely" while FMI's stations see no activity.
+ */
+export function nowcastKp(kp: number, local: { now: number; recent: number } | null): number {
+  if (!local) return kp;
+  const quiet = Math.max(local.now, local.recent);
+  const cap = quiet < DARK_KP ? Math.min(quiet + 1, DARK_KP) : quiet + 1;
+  return Math.max(local.now, Math.min(kp, cap));
+}
+
 const RAD = Math.PI / 180;
 
 /** Solar altitude in degrees (NOAA low-precision formulae, ~0.1° accuracy). */

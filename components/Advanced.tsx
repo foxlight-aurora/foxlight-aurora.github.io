@@ -38,7 +38,7 @@ export function Advanced({ data }: { data: AuroraData }) {
   const n = data.now;
   const rows: [string, React.ReactNode, string][] = [
     ["kp", <><Term k="kp">Kp</Term> (NOAA, latest 3 h)</>, kp(n.kp)],
-    ["nowcast", <><Term k="nowcast">Nowcast Kp</Term> (max of Kp and FMI R-index)</>, kp(n.effectiveKp)],
+    ["nowcast", <><Term k="nowcast">Nowcast Kp</Term> (Kp checked against FMI R-index)</>, kp(n.effectiveKp)],
     ...n.stations.map((s): [string, React.ReactNode, string] => [
       s.id,
       <>{s.name} <Term k="rIndex">R-index</Term> (yellow {s.yellow} / red {s.red})</>,
@@ -94,10 +94,13 @@ export function Advanced({ data }: { data: AuroraData }) {
                 clear nights, in line with FMI. Moonlight raises the Kp a spot needs: a full moon high up adds about 1 Kp at
                 dark spots (like a spot near town) and less where city light already dominates; a half moon gives about a
                 tenth of that. On bright-moon nights this takes dark spots from about 30% to 18%. Darkness ramps from 0 at
-                −6° to 1 at −12°, taken at the middle of each hour. For &ldquo;now&rdquo;, Kp is raised by FMI&apos;s R-index at Oulujärvi and Ranua (yellow line = 50%
-                chance of weak auroras ≈ even chance at dark spots; red line = 50% chance of strong ones ≈ even chance in
-                town), because local substorms show up there minutes after they start — long before the global 3-hour
-                Kp. Live readings older than 30 minutes are never shown as &ldquo;now&rdquo;.
+                −6° to 1 at −12°, taken at the middle of each hour. For &ldquo;now&rdquo;, Kp is checked against FMI&apos;s R-index at Oulujärvi and Ranua (yellow line =
+                50% chance of weak auroras ≈ even chance at dark spots; red line = 50% chance of strong ones ≈ even chance
+                in town), measured every 5 minutes right next to Oulu. Local activity above Kp wins, because a substorm shows
+                up there long before in the global 3-hour Kp. When the stations are quiet, Kp counts for at most 1 more than
+                they show (auroras further north can still be seen low on the horizon), and never more than an even chance
+                at dark spots. The next 3 hours hand over from this to NOAA&apos;s forecast. Live readings older than 30
+                minutes are never used for &ldquo;now&rdquo;.
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { buildHours, darkWindow, kpAt, refineOutlook, summarizeNights, type Hour, type Night } from "./forecast";
 import { moonAt, moonlight } from "./moon";
-import { darknessFactor, kpAlert, OULU, rIndexKp, SPOTS, sunAltitude, visibilityScore } from "./oulu";
+import { darknessFactor, kpAlert, nowcastKp, OULU, rIndexKp, SPOTS, sunAltitude, visibilityScore } from "./oulu";
 import { ovationNear, parse27Day, parseFmiSeries, parseKpForecast, parseRIndex, parseRtsw, type Point } from "./parse";
 import { withRetry } from "./retry";
 
@@ -131,12 +131,14 @@ export async function getAuroraData() {
     ? {
         level: LEVELS[Math.max(...live.map((s) => LEVELS.indexOf(s.level)))],
         kp: Math.max(...live.map((s) => rIndexKp(s.r, s.yellow, s.red))),
+        /** The same over the latest 45 minutes (see nowcastKp). */
+        recentKp: Math.max(...live.map((s) => rIndexKp(s.rRecent, s.yellow, s.red))),
         time: live.map((s) => s.time).sort()[0],
       }
     : null;
 
-  // Nowcast: global Kp, raised when FMI measures auroral activity right next to Oulu.
-  const effectiveKp = Math.max(kpNow, activity?.kp ?? 0);
+  // Nowcast: global Kp, checked against FMI's measurement right next to Oulu (see nowcastKp).
+  const effectiveKp = nowcastKp(kpNow, activity && { now: activity.kp, recent: activity.recentKp });
   const sunAlt = sunAltitude(now, OULU.lat, OULU.lon);
   const moonNow = moonAt(now, OULU.lat, OULU.lon);
   const moon = Math.round(moonlight(moonNow) * 100) / 100;
@@ -169,7 +171,7 @@ export async function getAuroraData() {
       kp: kpNow,
       effectiveKp,
       /** What sets the nowcast: the global Kp, or FMI's local measurement. */
-      driver: activity && activity.kp > kpNow ? ("fmi" as const) : ("kp" as const),
+      driver: effectiveKp !== kpNow ? ("fmi" as const) : ("kp" as const),
       alert: kpAlert(effectiveKp),
       sunAlt,
       /** The moon now: altitude (°), illuminated fraction, and how much it brightens the sky (0–1). */
