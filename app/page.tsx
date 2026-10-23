@@ -74,7 +74,8 @@ export default function Home() {
     <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData(data.generatedAt) }} />
     <AuroraFx kp={data.now.effectiveKp} />
-    <main className="relative z-[1] px-4 pb-20 sm:px-6">
+    {/* The build's snapshot time, for the watchdog to check the page and data.json come from the same build. */}
+    <main className="relative z-[1] px-4 pb-20 sm:px-6" data-generated-at={data.generatedAt}>
       <AutoRefresh generatedAt={data.generatedAt} />
       <div className="mx-auto max-w-6xl">
         <StaleBanner generatedAt={data.generatedAt} />

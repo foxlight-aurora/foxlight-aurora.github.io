@@ -1,0 +1,35 @@
+name: Watchdog
+
+# Checks the live site after every deploy, and every 30 minutes in case deploys stop (scripts/watchdog.mts).
+# On a failed check it opens the issue "Live site check failed" (GitHub emails the repo owner), comments when the
+# problems change, and closes it when everything passes again.
+on:
+  workflow_run:
+    workflows: ["Build & deploy"]
+    types: [completed]
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/watchdog.mts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

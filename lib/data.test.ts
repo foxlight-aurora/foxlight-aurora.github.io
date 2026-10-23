@@ -2,7 +2,8 @@
 // outdated products and stalled feeds. The rule under test: never present a confident wrong answer.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAuroraData } from "./data";
-import { SPOTS } from "./oulu";
+import { sunAltitudeNoaa, verifySnapshot } from "./verify";
+import { SPOTS, sunAltitude } from "./oulu";
 
 vi.mock("./retry", () => ({ withRetry: (fn: () => unknown) => fn() })); // no real waiting between retries
 
@@ -195,5 +196,75 @@ describe("getAuroraData", () => {
       expect(status(d, "rindex")).toBe("failed");
       expect(d.now.activity).toBeNull();
     });
+  });
+});
+
+describe("verifySnapshot", () => {
+  const snapshot = async () => {
+    serve(healthy());
+    return getAuroraData();
+  };
+
+  it("passes a snapshot the pipeline built", async () => {
+    expect(verifySnapshot(await snapshot())).toEqual([]);
+  });
+
+  it("passes at dusk too, when the chart's mid-hour sun and now's sun differ most", async () => {
+    vi.setSystemTime(new Date("2026-12-10T14:10:00Z")); // sun about −8° in Oulu now, −10° at the chart's mid-hour
+    const d = await snapshot();
+    expect(d.spots[0].hours.some((h) => h.time === "2026-12-10T14:00:00Z")).toBe(true); // the check really runs
+    expect(verifySnapshot(d)).toEqual([]);
+  });
+
+  it("catches a score that doesn't follow from its inputs", async () => {
+    const d = await snapshot();
+    d.spots[0].now += 20;
+    expect(verifySnapshot(d).join()).toMatch(/its inputs give/);
+  });
+
+  it("catches the chart's current hour using other activity than now (the 18 vs 36 bug)", async () => {
+    const d = await snapshot();
+    const thisHour = new Date(Math.floor(NOW.getTime() / 3600000) * 3600000).toISOString().replace(".000", "");
+    d.spots[0].hours.find((x) => x.time === thisHour)!.kp = d.now.kp - 0.7;
+    expect(verifySnapshot(d).join()).toMatch(/chart's current hour/);
+  });
+
+  it("catches a wrong Kp, nowcast or sun", async () => {
+    const d = await snapshot();
+    d.now.kp = 6;
+    d.now.sunAlt += 3;
+    const errors = verifySnapshot(d).join();
+    expect(errors).toMatch(/Kp now/);
+    expect(errors).toMatch(/Nowcast/);
+    expect(errors).toMatch(/Sun/);
+  });
+
+  it("catches nights that don't add up and broken numbers", async () => {
+    const d = await snapshot();
+    d.spots[0].nights[0].peak += 7;
+    d.spots[1].now = NaN;
+    const errors = verifySnapshot(d).join();
+    expect(errors).toMatch(/the night says/);
+    expect(errors).toMatch(/not a whole number/);
+  });
+
+  it("checks the sun with a formula that agrees with the site's to well under a degree", () => {
+    for (const iso of ["2026-12-10T21:30:00Z", "2026-06-21T10:00:00Z", "2026-03-20T15:45:00Z"]) {
+      const t = new Date(iso);
+      expect(Math.abs(sunAltitudeNoaa(t, 65.01, 25.47) - sunAltitude(t, 65.01, 25.47))).toBeLessThan(0.3);
+    }
+  });
+});
+
+describe("FMI's cache", () => {
+  it("refuses a cloud answer a cache held too long (the 6-hour cache bug)", async () => {
+    const fake = healthy();
+    vi.stubGlobal("fetch", async (url: string) => {
+      const key = Object.keys(fake).find((k) => url.includes(k))!;
+      const body = (fake[key] as () => unknown)();
+      const headers = key === "fmi::forecast" ? { age: String(74 * 60) } : undefined;
+      return new Response(typeof body === "string" ? body : JSON.stringify(body), { status: 200, headers });
+    });
+    await expect(getAuroraData()).rejects.toThrow(/Critical: cloud forecast came from a cache/);
   });
 });

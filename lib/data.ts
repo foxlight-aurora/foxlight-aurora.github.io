@@ -30,14 +30,19 @@ export type SourceStatus = "ok" | "stale" | "failed";
 // Live readings older than this are not presented as "now".
 const MAX_AGE = { wind: 30, mag: 30, rindex: 30, ovation: 180 } as const; // minutes
 
-async function get<T>(url: string, as: "json" | "text"): Promise<T> {
+/** `onHeaders` sees the response headers, e.g. to read how long a cache has held the answer (`Age`). */
+async function get<T>(url: string, as: "json" | "text", onHeaders?: (h: Headers) => void): Promise<T> {
   // Transient blips (timeouts, 5xx, empty replies) are common; retry twice before giving up.
   return withRetry(async () => {
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`${res.status} ${url}`);
+    onHeaders?.(res.headers);
     return (as === "json" ? res.json() : res.text()) as Promise<T>;
   }, [2000, 5000]);
 }
+
+/** A cloud forecast a cache has held longer than this may predate FMI's latest run: never use it. */
+const MAX_CLOUD_CACHE_SEC = 20 * 60;
 
 /** A failing optional source shows as "unavailable" instead of taking the page down. */
 async function safe<T>(id: SourceId, fn: () => Promise<T>, status: Record<string, SourceStatus>): Promise<T | null> {
@@ -73,9 +78,11 @@ export async function getAuroraData() {
   const startTime = new Date(Math.floor(now.getTime() / 600000) * 600000).toISOString().replace(".000", "");
   const cloudQuery = `${SPOTS.map((s) => `latlon=${s.lat},${s.lon}`).join("&")}&starttime=${startTime}`;
 
+  let cloudAgeSec = 0;
   const [kpBins, cloudSeries, rIndex, speed, bz, ovation, outlook] = await Promise.all([
     safe("kp", async () => parseKpForecast(await get(SOURCES.kp.url, "json")), status),
-    safe("cloud", async () => parseFmiSeries(await get(`${SOURCES.cloud.url}&${cloudQuery}&parameters=TotalCloudCover`, "text")), status),
+    safe("cloud", async () => parseFmiSeries(await get(`${SOURCES.cloud.url}&${cloudQuery}&parameters=TotalCloudCover`, "text",
+      (h) => (cloudAgeSec = Number(h.get("age") ?? 0) || 0))), status),
     safe("rindex", () => Promise.all(R_STATIONS.map(async (st) => ({ ...st, ...parseRIndex(await get(`${R_INDEX}/${st.id}_en.json`, "json")) }))), status),
     safe("wind", async () => parseRtsw(await get(SOURCES.wind.url, "json"), "proton_speed", now, 120), status),
     safe("mag", async () => parseRtsw(await get(SOURCES.mag.url, "json"), "bz_gsm", now, 120), status),
@@ -89,6 +96,8 @@ export async function getAuroraData() {
   // ── Critical sources ───────────────────────────────────────────────────────────
   const kpNow = kpBins ? kpAt(kpBins, now) : null;
   if (!kpBins || kpNow === null) throw new Error("Critical: Kp forecast unavailable or does not cover the current time");
+
+  if (cloudAgeSec > MAX_CLOUD_CACHE_SEC) throw new Error(`Critical: cloud forecast came from a cache, ${Math.round(cloudAgeSec / 60)} min old`);
 
   // FMI's forecast starts at the next full hour; reuse it for the current hour. Hours already past (an outdated
   // answer) are dropped, so an old forecast fails the length check instead of passing as current.

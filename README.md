@@ -57,6 +57,23 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
 - **Your location** — place search uses OpenStreetMap Nominatim from the browser; the chosen point is kept only in
   `localStorage`. Distances default to Oulu Market Square.
 
+## Correctness checks
+
+Two safety nets, so a wrong score doesn't wait for someone to notice it:
+
+- **Before every deploy** — `scripts/fetch-data.mts` runs `verifySnapshot` (`lib/verify.ts`) and skips the deploy if
+  it finds anything, leaving the last good site online. It checks that every spot's "now" follows from its inputs,
+  that the chart's current hour uses the same activity and clouds as "now", that night peaks and best nights add up,
+  that Kp and the nowcast follow from NOAA and FMI, and the sun by a second formula (NOAA's full algorithm). Every
+  check is exact or has a wide margin, so a correct snapshot never fails (including at dusk). Separately, the data
+  step refuses an FMI cloud answer a cache has held over 20 minutes. `lib/data.test.ts` breaks a snapshot in each of
+  these ways and checks it's caught.
+- **After every deploy and every 30 minutes** — `.github/workflows/watchdog.yml` runs `scripts/watchdog.mts` on the
+  live site: it's updating (35 min at night, 90 by day, allowing for NOAA's ~15-minute Kp gap after midnight UTC),
+  the page and `data.json` come from the same build, the data passes `verifySnapshot`, and its Kp matches NOAA's. A
+  failure opens the issue "Live site check failed" (GitHub emails the owner), closed again once the checks pass. Run
+  it locally with `npx tsx scripts/watchdog.mts`.
+
 ## Reliable refresh
 
 GitHub's `schedule:` trigger is best effort (runs are often hours late), so [cron-job.org](https://cron-job.org)
