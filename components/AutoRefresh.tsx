@@ -8,15 +8,16 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const CHECK_EVERY = 2 * 60 * 1000;
 // The page and version.json come from the same snapshot; anything newer is a newer build.
 const NEWER_BY = 60 * 1000;
-/** Query parameter that gives a refreshed page its own address, so no cache can hand back the old one. */
+/** Query parameter that gives a refreshed page its own address, so the browser's cache can't hand back the old one. */
 const V = "v";
-/** The build last reloaded for, so a cache that still serves the old page can't cause a reload loop. */
+/** The build last reloaded for, so GitHub's CDN still serving the old page can't cause a reload loop. */
 const TRIED = "foxlight:refresh-tried";
 
 /**
- * Keeps an open page on the newest build. The site is rebuilt every ~10 minutes, and GitHub's CDN and the browser
- * may each keep a copy for 10 more. So every check asks for version.json under a unique address (past every cache),
- * and a newer build is loaded under a unique address too, then the address is tidied back.
+ * Keeps an open page on the newest build. The site is rebuilt every ~10 minutes. Every check asks for version.json
+ * under a unique address, and a newer build is loaded under one too (then the address is tidied back): that gets past
+ * the browser's cache. GitHub's CDN ignores the address and keeps each file up to 10 minutes, so a new build shows
+ * within about 10 minutes of its deploy.
  */
 export function AutoRefresh({ generatedAt }: { generatedAt: string }) {
   useEffect(() => {

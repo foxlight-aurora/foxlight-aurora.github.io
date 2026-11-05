@@ -25,11 +25,13 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   readings older than 30 min show as "delayed" instead of "now". If the page itself is over 75 min old, visitors see a
   warning banner (computed in the browser, so it works even if the update pipeline stops).
 - **Scheduled rebuilds** — `.github/workflows/deploy.yml` runs tests, builds and deploys on every push, every 10 min
-  from 13:00 to 05:59 UTC (when it can be dark in Oulu) and hourly otherwise. GitHub runs schedules late or skips
+  from 13:00 to 07:59 UTC (the hours it can be dark in Oulu at some time of year, checked over a whole year for
+  every spot) and hourly otherwise. GitHub runs schedules late or skips
   them, so an external timer triggers the same workflow on the same pattern (see [Reliable refresh](#reliable-refresh)).
   Open pages check `version.json` at once when opened, brought back or back online, and every 2 minutes while open,
-  and load a newer build under a one-off address so neither GitHub's CDN nor the browser (10-minute caches) can serve
-  the old one. Runs queue rather than cancel each other, with timeouts, so one stuck deploy can't block updates.
+  and load a newer build under a one-off address, which gets past the browser's cache. GitHub's CDN ignores the
+  address and keeps each file for up to 10 minutes, so a new build reaches visitors within about 10 minutes of its
+  deploy. Runs queue rather than cancel each other, with timeouts, so one stuck deploy can't block updates.
 - **Visibility model** — `lib/oulu.ts`:
   `chance = 100 × activity(Kp, spot.minKp, moonlight) × (1 − clouds) × darkness(sun altitude)`.
   Activity is a logistic curve, even at `minKp + 0.25` with a 0.5 Kp scale; spots have an even chance from Kp 3+
@@ -85,8 +87,8 @@ with body `{"ref":"main"}`:
 
 | Job | Minutes | Hours (UTC) |
 |---|---|---|
-| Night | 0, 10, 20, 30, 40, 50 | 13–23, 0–5 |
-| Day | 0 | 6–12 |
+| Night | 0, 10, 20, 30, 40, 50 | 13–23, 0–7 |
+| Day | 0 | 8–12 |
 
 Headers: `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2026-03-10`,
 `Authorization: Bearer <token>`. The token is a fine-grained personal access token scoped to this repository only,

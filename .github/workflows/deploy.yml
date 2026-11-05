@@ -3,13 +3,14 @@ name: Build & deploy
 on:
   push:
     branches: [main]
-  # Times are UTC. Every 10 min while it can be dark in Oulu (16:00–08:59 Finnish summer time), hourly in daylight.
+  # Times are UTC, so they don't move with Finnish summer/winter time. Every 10 min from 13:00 to 07:59, the hours it
+  # can be dark in Oulu at some time of year (15:00–09:59 Finnish winter time); hourly in the hours it never is.
   # Off the hour because GitHub delays busy slots. GitHub runs schedules late or not at all, so an external timer
   # also triggers workflow_dispatch on the same pattern (see README); overlapping runs queue (concurrency below).
   schedule:
     - cron: "3-59/10 13-23 * * *"
-    - cron: "3-59/10 0-5 * * *"
-    - cron: "3 6-12 * * *"
+    - cron: "3-59/10 0-7 * * *"
+    - cron: "3 8-12 * * *"
   workflow_dispatch:
 
 permissions:

@@ -10,7 +10,7 @@ import { verifySnapshot } from "../lib/verify";
 const SITE = process.env.SITE ?? SITE_URL;
 const TITLE = "Live site check failed";
 
-/** Fetches past every cache, so the check sees what a visitor opening the site now gets. */
+/** Fetches what a visitor opening the site now gets: past the local cache (GitHub's CDN ignores the query). */
 async function get(url: string, as: "json" | "text" = "json") {
   const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
@@ -21,17 +21,20 @@ async function check(): Promise<string[]> {
   const data = (await get(`${SITE}/data.json`)) as AuroraData;
   const errors = verifySnapshot(data);
 
-  // Rebuilds run every 10 minutes from 13 to 06 UTC and hourly otherwise; NOAA's Kp file has a ~15-minute gap after
-  // midnight UTC that holds builds back on purpose, so leave room for it.
+  // Normal worst case: the build interval, NOAA's ~15-minute Kp gap after midnight UTC (which holds builds back on
+  // purpose), and GitHub's CDN keeping each file up to 10 minutes. Rebuilds run every 10 minutes from 13:00 to 07:59
+  // UTC and hourly otherwise; in the first night hour the last hourly build still counts.
+  const night = (h: number) => h >= 13 || h < 8;
   const hour = new Date().getUTCHours();
-  const limit = hour >= 13 || hour < 6 ? 35 : 90;
+  const limit = night(hour) && night((hour + 23) % 24) ? 50 : 90;
   const age = (Date.now() - Date.parse(data.generatedAt)) / 60000;
   if (age > limit) errors.push(`The newest data is ${Math.round(age)} minutes old (more than ${limit}): the site isn't updating`);
 
-  // The page and data.json come from the same build (a deploy between the two requests can split them: retry once).
-  const pageAt = async () => ((await get(SITE, "text")) as string).match(/data-generated-at="([^"]+)"/)?.[1];
-  const sameBuild = (await pageAt()) === data.generatedAt || (await pageAt()) === ((await get(`${SITE}/data.json`)) as AuroraData).generatedAt;
-  if (!sameBuild) errors.push("The page and data.json come from different builds");
+  // The page is built from the same kind of snapshot as data.json. GitHub's CDN keeps each file up to 10 minutes on its
+  // own, so the two can come from builds a little apart; more than 20 minutes apart means something is wrong.
+  const pageAt = ((await get(SITE, "text")) as string).match(/data-generated-at="([^"]+)"/)?.[1];
+  const apart = pageAt ? Math.abs(Date.parse(pageAt) - Date.parse(data.generatedAt)) / 60000 : Infinity;
+  if (!(apart <= 20)) errors.push(`The page and data.json are from builds ${pageAt ? `${Math.round(apart)} minutes` : "of unknown time"} apart`);
 
   // Kp matches NOAA's for that 3-hour block, unless NOAA has revised it since (estimated → observed). NOAA being
   // unreachable isn't the site's fault: skip.
