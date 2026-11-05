@@ -11,8 +11,11 @@ export function kpAt(bins: KpBin[], t: Date): number | null {
   return bin?.kp ?? null;
 }
 
-/** `moon`: how much moonlight brightens the sky that hour, 0–1 (see moonlight()). */
-export type Hour = { time: string; kp: number; sunAlt: number; moon: number; spotId: string; score: number; cloud: number | null };
+/**
+ * `moon`: how much moonlight brightens the sky that hour, 0–1 (see moonlight()). `measured`: how far its Kp is the
+ * measured nowcast (1) rather than NOAA's forecast (0), see auroraFactor.
+ */
+export type Hour = { time: string; kp: number; measured: number; sunAlt: number; moon: number; spotId: string; score: number; cloud: number | null };
 
 /** Hours over which the measured activity hands over to NOAA's forecast: all measured now, all forecast from +3 h. */
 const HANDOVER_HOURS = 3;
@@ -20,7 +23,8 @@ const HANDOVER_HOURS = 3;
 /**
  * Hourly scores from `from`'s hour on. `nowKp`, the activity measured now (the nowcast), sets the current hour, so it
  * agrees with "now", and blends into NOAA's forecast over the next hours: a reading from minutes ago says more about
- * the next hour or two than a 3-hour forecast issued hours earlier.
+ * the next hour or two than a 3-hour forecast issued hours earlier. Forecast Kp is scored on a softer curve than
+ * measured Kp (see auroraFactor), over the same handover.
  */
 export function buildHours(p: {
   from: Date;
@@ -38,6 +42,7 @@ export function buildHours(p: {
     if (forecast === null) continue;
     const w = p.nowKp === undefined ? 0 : Math.max(0, 1 - i / HANDOVER_HOURS);
     const kp = Math.round((w * (p.nowKp ?? 0) + (1 - w) * forecast) * 100) / 100;
+    const measured = Math.round(w * 100) / 100;
     const iso = t.toISOString().replace(".000", "");
     // An hour is shown as a whole (06:00–07:00), and at twilight the sun moves several degrees in it: judge
     // darkness at the middle of the hour, not its start, and at the spot itself (Hailuoto sees dark minutes later).
@@ -47,8 +52,8 @@ export function buildHours(p: {
     for (const spot of p.spots) {
       const sunAlt = sunAltitude(mid, spot.lat, spot.lon);
       const cloud = p.clouds[spot.id]?.find((c) => c.time === iso)?.value ?? null;
-      const score = visibilityScore({ kp, minKp: spot.minKp, cloud, sunAlt, moon });
-      if (!best || score > best.score) best = { time: iso, kp, sunAlt, moon, spotId: spot.id, score, cloud };
+      const score = visibilityScore({ kp, minKp: spot.minKp, cloud, sunAlt, moon, measured });
+      if (!best || score > best.score) best = { time: iso, kp, measured, sunAlt, moon, spotId: spot.id, score, cloud };
     }
     if (best) hours.push(best);
   }
@@ -101,7 +106,7 @@ export function summarizeNights(hours: Hour[], minKp = DARKEST_MIN_KP): Night[] 
       kp: Math.max(...hs.map((h) => h.kp)),
       cloud: peak.cloud,
       moon: peak.moon,
-      limit: clear < auroraFactor(peak.kp, minKp, peak.moon) ? "clouds" : "activity",
+      limit: clear < auroraFactor(peak.kp, minKp, peak.moon, peak.measured) ? "clouds" : "activity",
     };
   });
 }

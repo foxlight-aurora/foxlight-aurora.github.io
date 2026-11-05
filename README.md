@@ -51,7 +51,10 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   spots, so "likely" is never shown while FMI sees no activity. Without fresh readings (< 30 min) Kp is used as is.
 - **Forecast** — `lib/forecast.ts` scores 72 hours per spot, groups them into nights and finds each night's best window.
   The current hour uses the measured nowcast (so it agrees with "now"), handing over to NOAA's Kp forecast
-  linearly within 3 hours.
+  linearly within 3 hours. Forecast Kp is less certain than measured Kp, so it goes through a softer curve: it counts
+  0.5 lower and the curve is twice as wide. Backtested on NOAA's 3-day forecasts for Aug–Nov 2026 against GFZ's
+  measured Kp: NOAA ran ~0.5 Kp high, storm forecasts verified on 2 of 19 nights, and the softer curve cut the error
+  from 0.128 to 0.089. A forecast Kp 5 / 6 / 7 still gives a clear dark spot 78 / 90 / 96; "now" is unchanged.
 - **Search engines** — `app/robots.ts`, `app/sitemap.ts` (lastmod = data time), `app/manifest.ts`, a static
   share image (`app/opengraph-image.png`, PNG so GitHub Pages serves it as an image), canonical URL and JSON-LD
   (WebSite, WebPage, FAQPage) in `app/page.tsx`. Site name, title and description live in `lib/site.ts`.

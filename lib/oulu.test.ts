@@ -54,6 +54,13 @@ describe("auroraFactor — calibrated to FMI (~25% of clear dark nights around O
   it("keeps quiet Kp 2 nights unlikely even at dark spots", () => expect(auroraFactor(2.33, 3)).toBeLessThan(0.15));
   it("is near-certain at dark spots in a storm", () => expect(auroraFactor(5.67, 3)).toBeGreaterThan(0.99));
   it("is ~0 for the city on a quiet night", () => expect(auroraFactor(1, 5)).toBeLessThan(0.001));
+  it("is softer for NOAA's forecast Kp than for measured Kp (backtest Aug–Nov 2026)", () => {
+    expect(auroraFactor(5, 3, 0, 1)).toBe(auroraFactor(5, 3)); // measured is the default
+    expect(auroraFactor(5, 3, 0, 0)).toBeCloseTo(0.78, 2);
+    expect(auroraFactor(6, 3, 0, 0)).toBeCloseTo(0.9, 2);
+    expect(auroraFactor(7, 3, 0, 0)).toBeCloseTo(0.96, 2);
+    expect(auroraFactor(2.33, 3, 0, 0)).toBeLessThan(0.25); // a quiet forecast stays unlikely
+  });
 });
 
 describe("darknessFactor", () => {

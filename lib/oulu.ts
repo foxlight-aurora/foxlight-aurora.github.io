@@ -57,9 +57,18 @@ export const moonlitKp = (minKp: number, moon: number) => DARKEST_KP + Math.log2
  * (a full solar cycle): on clear dark nights dark spots average ~1 in 3 (29% counting the moon), semi-dark shores
  * ~1 in 6 (13.5%), which brackets FMI's ~25% for the Oulu area. On the 1 in 8 nights with a bright moon up, dark
  * spots drop from 30% to 18%. FMI's R-index lines anchor the same points (see rIndexKp).
+ *
+ * `measured` (0–1) says how far the Kp is measured (1, the nowcast) rather than NOAA's forecast for later hours (0).
+ * A forecast Kp gets a softer curve: it counts 0.5 lower and the curve is twice as wide. NOAA's 1–3-day forecasts ran
+ * ~0.5 Kp high in our backtest (Aug–Nov 2026, against GFZ's measured Kp) and missed by ~1.2 Kp either way; storm
+ * forecasts verified on 2 of 19 nights. The softer curve cut the backtest's error from 0.128 to 0.089 and still gives
+ * a forecast Kp 5 / 6 / 7 at a dark spot 78 / 90 / 96.
  */
-export function auroraFactor(kp: number, minKp: number, moon = 0): number {
-  return 1 / (1 + Math.exp(-(kp - evenChanceKp(moonlitKp(minKp, moon))) / 0.5));
+export function auroraFactor(kp: number, minKp: number, moon = 0, measured = 1): number {
+  const forecast = 1 - measured;
+  const even = evenChanceKp(moonlitKp(minKp, moon)) + 0.5 * forecast;
+  const width = 0.5 * (1 + forecast);
+  return 1 / (1 + Math.exp(-(kp - even) / width));
 }
 
 /** 0 above -6° (too bright), 1 below -12° (dark), linear in between. */
@@ -67,9 +76,9 @@ export function darknessFactor(sunAlt: number): number {
   return clamp01((-6 - sunAlt) / 6);
 }
 
-export function visibilityScore(p: { kp: number; minKp: number; cloud: number | null; sunAlt: number; moon?: number }): number {
+export function visibilityScore(p: { kp: number; minKp: number; cloud: number | null; sunAlt: number; moon?: number; measured?: number }): number {
   const clear = 1 - (p.cloud ?? 50) / 100;
-  return Math.round(100 * auroraFactor(p.kp, p.minKp, p.moon) * clear * darknessFactor(p.sunAlt));
+  return Math.round(100 * auroraFactor(p.kp, p.minKp, p.moon, p.measured) * clear * darknessFactor(p.sunAlt));
 }
 
 export type Tone = "great" | "good" | "maybe" | "low";

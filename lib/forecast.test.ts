@@ -32,16 +32,28 @@ describe("buildHours", () => {
       clouds: { city: [{ time: "2026-12-10T21:00:00Z", value: 0 }], dark: [{ time: "2026-12-10T21:00:00Z", value: 95 }] },
     });
     expect(hours).toHaveLength(2);
-    // Kp 4 under a clear sky in town (8) beats Kp 4 behind 95% cloud at the dark spot (4)
-    expect(hours[0]).toMatchObject({ time: "2026-12-10T21:00:00Z", kp: 4, spotId: "city", score: 8, cloud: 0 });
+    // Forecast Kp 4 under a clear sky in town (15) beats Kp 4 behind 95% cloud at the dark spot (3)
+    expect(hours[0]).toMatchObject({ time: "2026-12-10T21:00:00Z", kp: 4, measured: 0, spotId: "city", score: 15, cloud: 0 });
     // second hour has no cloud data → unknown (50%) everywhere, dark spot wins on Kp
-    expect(hours[1]).toMatchObject({ spotId: "dark", score: 41, cloud: null });
+    expect(hours[1]).toMatchObject({ spotId: "dark", score: 28, cloud: null });
   });
 
   it("starts from the activity measured now and hands over to NOAA's forecast within 3 hours", () => {
     const flat = Array.from({ length: 3 }, (_, i) => ({ start: `2026-12-10T${String(18 + 3 * i).padStart(2, "0")}:00:00Z`, kp: 4, kind: "predicted" as const, scale: null }));
     const hours = buildHours({ from: new Date("2026-12-10T18:40:00Z"), count: 5, kpBins: flat, spots: [spots[1]], clouds: {}, nowKp: 2.5 });
     expect(hours.map((h) => h.kp)).toEqual([2.5, 3, 3.5, 4, 4]);
+    expect(hours.map((h) => h.measured)).toEqual([1, 0.67, 0.33, 0, 0]);
+  });
+
+  it("scores the current hour exactly like now, and later hours on the softer forecast curve", () => {
+    const at = new Date("2026-12-10T21:20:00Z");
+    const kpBins = [{ start: "2026-12-10T21:00:00Z", kp: 5, kind: "predicted" as const, scale: null }, { start: "2026-12-11T00:00:00Z", kp: 5, kind: "predicted" as const, scale: null }];
+    const hours = buildHours({ from: at, count: 4, kpBins, spots: [spots[1]], clouds: {}, nowKp: 5 });
+    const score = (h: (typeof hours)[number], measured?: number) =>
+      visibilityScore({ kp: 5, minKp: 3, cloud: null, sunAlt: h.sunAlt, moon: h.moon, measured });
+    expect(hours[0].score).toBe(score(hours[0])); // measured: the same curve as "now"
+    expect(hours[3].score).toBe(score(hours[3], 0));
+    expect(hours[3].score).toBeLessThan(score(hours[3]));
   });
 
   it("makes the current hour agree with the score for now", () => {
@@ -68,7 +80,7 @@ describe("buildHours", () => {
 
 describe("summarizeNights", () => {
   it("groups hours into Helsinki-evening nights and finds the peak window", () => {
-    const h = (time: string, score: number) => ({ time, kp: 4, sunAlt: -30, moon: 0, spotId: "dark", score, cloud: 10 });
+    const h = (time: string, score: number) => ({ time, kp: 4, measured: 1, sunAlt: -30, moon: 0, spotId: "dark", score, cloud: 10 });
     const nights = summarizeNights([
       h("2026-12-10T18:00:00Z", 10),
       h("2026-12-10T19:00:00Z", 60),
@@ -88,15 +100,15 @@ describe("summarizeNights", () => {
   });
 
   it("explains a zero night: clouds vs. quiet activity", () => {
-    const cloudy = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 5, sunAlt: -30, moon: 0, spotId: "dark", score: 0, cloud: 100 }]);
-    const quiet = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 0.3, sunAlt: -30, moon: 0, spotId: "dark", score: 0, cloud: 0 }]);
+    const cloudy = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 5, measured: 1, sunAlt: -30, moon: 0, spotId: "dark", score: 0, cloud: 100 }]);
+    const quiet = summarizeNights([{ time: "2026-12-10T21:00:00Z", kp: 0.3, measured: 1, sunAlt: -30, moon: 0, spotId: "dark", score: 0, cloud: 0 }]);
     expect(cloudy[0].limit).toBe("clouds");
     expect(quiet[0].limit).toBe("activity");
   });
 
   it("judges activity against the spot's own Kp threshold", () => {
     // Kp 3 under a 40% cloud deck: clouds hold back a dark spot, activity holds back the city centre.
-    const hs = [{ time: "2026-12-10T21:00:00Z", kp: 3, sunAlt: -30, moon: 0, spotId: "x", score: 0, cloud: 40 }];
+    const hs = [{ time: "2026-12-10T21:00:00Z", kp: 3, measured: 1, sunAlt: -30, moon: 0, spotId: "x", score: 0, cloud: 40 }];
     expect(summarizeNights(hs, 2)[0].limit).toBe("clouds");
     expect(summarizeNights(hs, 4)[0].limit).toBe("activity");
   });
