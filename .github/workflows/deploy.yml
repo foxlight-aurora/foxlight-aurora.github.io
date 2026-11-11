@@ -22,7 +22,7 @@ permissions:
 # instead of cancelling it. Cancelling in progress let back-to-back runs cancel every deploy for half an hour.
 # The timeouts stop a stuck run from holding up the next one.
 concurrency:
-  group: pages
+  group: deploy # renamed from "pages" to step past a run stuck in that queue (9 Nov); the watchdog now cancels such runs
   cancel-in-progress: false
 
 jobs:
