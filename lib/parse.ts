@@ -4,7 +4,7 @@
 
 export type KpBin = { start: string; kp: number; kind: "observed" | "estimated" | "predicted"; scale: string | null };
 export type Point = { time: string; value: number };
-export type Series = { lat: number; lon: number; points: Point[] };
+type Series = { lat: number; lon: number; points: Point[] };
 
 const utc = (tag: string) => (tag.endsWith("Z") ? tag : `${tag}Z`);
 const iso = (ms: number) => new Date(ms).toISOString().replace(".000", "");

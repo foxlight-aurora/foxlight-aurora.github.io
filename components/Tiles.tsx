@@ -1,5 +1,5 @@
 import type { AuroraData } from "@/lib/data";
-import { kp, time, TONE } from "@/lib/format";
+import { kp, shortName, time, TONE } from "@/lib/format";
 import type { TermKey } from "@/lib/glossary";
 import { CITY_KP, DARK_KP, kpAlert, type KpAlert, type Tone } from "@/lib/oulu";
 import { BySpot } from "./SpotChoice";
@@ -28,6 +28,12 @@ type Spot = AuroraData["spots"][number];
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
+// Each reading's bands: [tone, meaning], strongest first.
+const cloudBand = (c: number): [Tone, string] => (c < 30 ? ["great", "Mostly clear"] : c < 70 ? ["maybe", "Partly cloudy"] : ["low", "Cloudy"]);
+const windBand = (v: number): [Tone, string] => (v >= 600 ? ["great", "Fast — powers strong auroras"] : v >= 450 ? ["good", "Elevated"] : ["low", "Calm"]);
+const bzBand = (bz: number): [Tone, string] =>
+  bz <= -5 ? ["great", "Strongly south — energy pouring in"] : bz < 0 ? ["good", "South — energy gets in"] : ["low", "North — energy mostly kept out"];
+
 /** A hairline gauge: the value fills from the left, ticks mark where it starts to matter. */
 function Gauge({ frac, tone, marks = [] }: Bar) {
   return (
@@ -43,7 +49,7 @@ function BzArrow({ bz }: { bz: number }) {
   return (
     <svg viewBox="0 0 40 40" className="size-10 shrink-0" aria-hidden>
       <circle cx="20" cy="20" r="18" fill="none" stroke="var(--color-line)" strokeWidth="2" />
-      <g transform={bz < 0 ? "rotate(180 20 20)" : undefined} className={bz <= -5 ? "text-great" : bz < 0 ? "text-good" : "text-muted"}>
+      <g transform={bz < 0 ? "rotate(180 20 20)" : undefined} className={TONE[bzBand(bz)[0]].text}>
         <path d="M20 30V11M13 17l7-7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
@@ -61,16 +67,17 @@ export function Tiles({ data }: { data: AuroraData }) {
   const yellowMark = live.length ? Math.min(...live.map((s) => s.yellow / s.red)) : 0.35;
   const alert = kpAlert(n.kp);
 
-  const short = (sp: Spot) => sp.name.split(" · ")[0];
   // Clouds and darkness differ by spot, so these two follow the spot picker.
-  const cloudTile = (sp: Spot): Tile => ({
-    label: "Cloud cover", term: "clouds", scope: short(sp), value: sp.cloud === null ? "–" : Math.round(sp.cloud), unit: "%",
-    bar: sp.cloud === null ? undefined : { frac: sp.cloud / 100, tone: sp.cloud < 30 ? "great" : sp.cloud < 70 ? "maybe" : "low" },
-    status: sp.cloud === null ? "Unavailable" : `${sp.cloud < 30 ? "Mostly clear" : sp.cloud < 70 ? "Partly cloudy" : "Cloudy"} now`,
-    tone: sp.cloud === null ? "low" : sp.cloud < 30 ? "great" : sp.cloud < 70 ? "maybe" : "low",
-  });
+  const cloudTile = (sp: Spot): Tile => {
+    if (sp.cloud === null) return { label: "Cloud cover", term: "clouds", scope: shortName(sp.name), value: "–", unit: "%", status: "Unavailable", tone: "low" };
+    const [tone, word] = cloudBand(sp.cloud);
+    return {
+      label: "Cloud cover", term: "clouds", scope: shortName(sp.name), value: Math.round(sp.cloud), unit: "%",
+      bar: { frac: sp.cloud / 100, tone }, status: `${word} now`, tone,
+    };
+  };
   const darkTile = (sp: Spot): Tile => ({
-    label: "Darkness", term: "sunAlt", scope: short(sp),
+    label: "Darkness", term: "sunAlt", scope: shortName(sp.name),
     // Dark now: until when. Not yet: from when (and until when, below).
     prefix: sp.dark ? (sp.sunAlt < -12 ? "until" : "from") : undefined,
     value: sp.dark ? time(sp.sunAlt < -12 ? sp.dark.end : sp.dark.start) : "–",
@@ -93,18 +100,18 @@ export function Tiles({ data }: { data: AuroraData }) {
       status: a ? `${LEVEL[a.level][2]} · ${time(a.time)}` : missing("rindex"), tone: a ? LEVEL[a.level][1] : "low",
     },
     "clouds",
-    {
-      label: "Solar wind", term: "solarWind", scope: "Global", value: n.speed === null ? "–" : Math.round(n.speed), unit: "km/s",
-      bar: n.speed === null ? undefined : { frac: n.speed / 800, tone: n.speed >= 600 ? "great" : n.speed >= 450 ? "good" : "low", marks: [450 / 800] },
-      status: n.speed === null ? missing("wind") : n.speed >= 600 ? "Fast — powers strong auroras" : n.speed >= 450 ? "Elevated" : "Calm",
-      tone: n.speed === null ? "low" : n.speed >= 600 ? "great" : n.speed >= 450 ? "good" : "low",
-    },
-    {
-      label: "Bz", term: "bz", scope: "Global", value: n.bz === null ? "–" : n.bz.toFixed(1), unit: "nT",
-      icon: n.bz === null ? undefined : <BzArrow bz={n.bz} />,
-      status: n.bz === null ? missing("mag") : n.bz <= -5 ? "Strongly south — energy pouring in" : n.bz < 0 ? "South — energy gets in" : "North — energy mostly kept out",
-      tone: n.bz === null ? "low" : n.bz <= -5 ? "great" : n.bz < 0 ? "good" : "low",
-    },
+    n.speed === null
+      ? { label: "Solar wind", term: "solarWind", scope: "Global", value: "–", unit: "km/s", status: missing("wind"), tone: "low" }
+      : {
+          label: "Solar wind", term: "solarWind", scope: "Global", value: Math.round(n.speed), unit: "km/s",
+          bar: { frac: n.speed / 800, tone: windBand(n.speed)[0], marks: [450 / 800] }, status: windBand(n.speed)[1], tone: windBand(n.speed)[0],
+        },
+    n.bz === null
+      ? { label: "Bz", term: "bz", scope: "Global", value: "–", unit: "nT", status: missing("mag"), tone: "low" }
+      : {
+          label: "Bz", term: "bz", scope: "Global", value: n.bz.toFixed(1), unit: "nT",
+          icon: <BzArrow bz={n.bz} />, status: bzBand(n.bz)[1], tone: bzBand(n.bz)[0],
+        },
     "darkness",
   ];
 

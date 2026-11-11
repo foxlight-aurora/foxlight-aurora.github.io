@@ -1,6 +1,3 @@
-import { scoreLabel } from "@/lib/oulu";
-import { TONE } from "@/lib/format";
-
 export function Section(props: { id: string; title: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section id={props.id} aria-labelledby={`${props.id}-h`} className="mt-20">
@@ -18,16 +15,6 @@ export function Section(props: { id: string; title: string; hint?: React.ReactNo
 /** Small caps label used on tiles and table heads. */
 export const LABEL = "text-[0.7rem] font-semibold tracking-[0.16em] text-muted uppercase sm:text-xs";
 
-export function Score({ value, size = "sm" }: { value: number; size?: "sm" | "lg" }) {
-  const { label, tone } = scoreLabel(value);
-  return (
-    <span className={`inline-flex items-center gap-2 ${size === "lg" ? "text-base" : "text-sm"} ${TONE[tone].text}`}>
-      <span className={`size-1.5 rounded-full ${TONE[tone].dot}`} />
-      {label}
-      <span className="font-mono text-xs text-faint tabular-nums">{value}</span>
-    </span>
-  );
-}
 
 export function Card({ className = "", children }: { className?: string; children: React.ReactNode }) {
   return <div className={`rounded-2xl border border-rule bg-tile ${className}`}>{children}</div>;

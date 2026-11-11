@@ -16,6 +16,10 @@ export const day = (iso: string) => dayFmt.format(new Date(iso));
 export const date = (ymd: string) => dateFmt.format(new Date(ymd));
 
 export const kp = (v: number | null) => (v === null ? "–" : v.toFixed(1));
+/** Cloud cover as a whole percent, "?" when unknown. */
+export const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
+/** "Hailuoto" for "Hailuoto · Marjaniemi". */
+export const shortName = (name: string) => name.split(" · ")[0];
 
 export const TONE: Record<Tone, { text: string; bg: string; dot: string }> = {
   great: { text: "text-great", bg: "bg-great", dot: "bg-great shadow-[0_0_10px] shadow-great/60" },

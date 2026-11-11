@@ -26,7 +26,7 @@ export const SPOTS: Spot[] = [
 ];
 
 /** The Kp at which a spot's chance is even: just above its minKp, so "Kp 3+" (3.33, Kp's next step) is past it. */
-export const evenChanceKp = (minKp: number) => minKp + 0.25;
+const evenChanceKp = (minKp: number) => minKp + 0.25;
 /** Kp for an even chance at the darkest spots, and in the city centre. */
 export const DARK_KP = evenChanceKp(Math.min(...SPOTS.map((s) => s.minKp)));
 export const CITY_KP = evenChanceKp(Math.max(...SPOTS.map((s) => s.minKp)));

@@ -42,6 +42,8 @@ const FAQ = [
   ],
 ];
 
+const LINK = "text-muted underline underline-offset-4 hover:text-ink";
+
 function structuredData(generatedAt: string) {
   const graph = [
     { "@type": "WebSite", "@id": `${SITE_URL}/#website`, url: `${SITE_URL}/`, name: SITE_NAME, description: SITE_DESCRIPTION, inLanguage: "en" },
@@ -130,9 +132,9 @@ export default function Home() {
             </p>
             <p>
               Data:{" "}
-              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://en.ilmatieteenlaitos.fi/auroras-in-finland">FMI</a>,{" "}
-              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://rwc-finland.fmi.fi/">RWC Finland</a>,{" "}
-              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://www.swpc.noaa.gov/">NOAA SWPC</a>.
+              <a className={LINK} href="https://en.ilmatieteenlaitos.fi/auroras-in-finland">FMI</a>,{" "}
+              <a className={LINK} href="https://rwc-finland.fmi.fi/">RWC Finland</a>,{" "}
+              <a className={LINK} href="https://www.swpc.noaa.gov/">NOAA SWPC</a>.
               A forecast, not a promise — the aurora is famously unpredictable.
             </p>
             <p>
@@ -142,7 +144,7 @@ export default function Home() {
             </p>
             <p>
               © 2026 Abhishek Singh Sambyal. Licensed under the{" "}
-              <a className="text-muted underline underline-offset-4 hover:text-ink" href="https://www.gnu.org/licenses/gpl-3.0.html">
+              <a className={LINK} href="https://www.gnu.org/licenses/gpl-3.0.html">
                 GNU GPLv3
               </a>
               .

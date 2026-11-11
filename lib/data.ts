@@ -14,7 +14,7 @@ const R_STATIONS = [
   { id: "RAN", name: "Ranua" },
 ];
 
-export const SOURCES = {
+const SOURCES = {
   kp: { name: "NOAA SWPC · Kp 3-day forecast", url: `${SWPC}/products/noaa-planetary-k-index-forecast.json` },
   cloud: { name: "FMI · cloud cover forecast", url: `${FMI}fmi::forecast::edited::weather::scandinavia::point::simple` },
   rindex: { name: "FMI · R-index auroral activity (Oulujärvi, Ranua)", url: R_INDEX },
@@ -25,7 +25,7 @@ export const SOURCES = {
 } as const;
 
 type SourceId = keyof typeof SOURCES;
-export type SourceStatus = "ok" | "stale" | "failed";
+type SourceStatus = "ok" | "stale" | "failed";
 
 // Live readings older than this are not presented as "now".
 const MAX_AGE = { wind: 30, mag: 30, rindex: 30, ovation: 180 } as const; // minutes

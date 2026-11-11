@@ -10,7 +10,7 @@ type Pos = { left: number; top: number; width: number; above: boolean };
  * A technical term with a one-line explanation. Hover (mouse), tap (touch) or focus (keyboard) to show it.
  * The tip is fixed-positioned and clamped to the viewport, so it never causes sideways scrolling.
  */
-export function Term({ k, children, icon }: { k: TermKey; children: React.ReactNode; icon?: boolean }) {
+export function Term({ k, children }: { k: TermKey; children: React.ReactNode }) {
   const ref = useRef<HTMLButtonElement>(null);
   const mouse = useRef(false);
   const id = useId();
@@ -45,7 +45,7 @@ export function Term({ k, children, icon }: { k: TermKey; children: React.ReactN
         ref={ref}
         type="button"
         aria-describedby={pos ? id : undefined}
-        className={`${icon ? "whitespace-nowrap " : ""}cursor-help underline decoration-faint decoration-dotted underline-offset-4 hover:decoration-muted focus:outline-none focus-visible:decoration-great`}
+        className="cursor-help underline decoration-faint decoration-dotted underline-offset-4 hover:decoration-muted focus:outline-none focus-visible:decoration-great"
         onPointerDown={(e) => (mouse.current = e.pointerType === "mouse")}
         onPointerEnter={(e) => e.pointerType === "mouse" && show()}
         onPointerLeave={(e) => e.pointerType === "mouse" && hide()}
@@ -57,12 +57,6 @@ export function Term({ k, children, icon }: { k: TermKey; children: React.ReactN
         }}
       >
         {children}
-        {icon && (
-          <svg viewBox="0 0 16 16" className="ml-1 inline size-3 align-[-1px] text-faint" aria-hidden>
-            <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" />
-            <path d="M8 7v4M8 4.6v.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        )}
       </button>
       {pos &&
         createPortal(

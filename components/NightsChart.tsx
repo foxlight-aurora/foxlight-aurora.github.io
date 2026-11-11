@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { hour, kp, needKp, time, TONE } from "@/lib/format";
+import { hour, kp, needKp, pct, time, TONE } from "@/lib/format";
 import { scoreLabel } from "@/lib/oulu";
 
 type HourView = { time: string; score: number; kp: number; cloud: number | null };
@@ -21,7 +21,6 @@ export type NightView = {
 
 const GAP = 1.5; // hour-widths between nights
 const MIN = 9; // a night already under way keeps at least this width, so its name fits on a phone
-const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
 
 function summary(n: NightView) {
   if (n.peak >= 15) return `${n.label}: best ${time(n.start)}–${time(n.end)} · ${scoreLabel(n.peak).label} ${n.peak}`;
@@ -52,11 +51,10 @@ export function NightsChart({ nights, now }: { nights: NightView[]; now: string 
   const W = Math.max(x, 1);
   if (!points.length) return null;
 
-  const at = (i: number) => points[i];
-  const line = (k: number) => points.filter((p) => p.night === k).map((p) => `${p.x},${100 - p.h.score}`);
-  const sel = picked === null ? null : at(picked);
+  const sel = picked === null ? null : points[picked];
+  const byNight = nights.map((_, k) => points.filter((p) => p.night === k));
   // Peak of each night, labelled on the curve.
-  const peaks = nights.map((_, k) => points.filter((p) => p.night === k).reduce<(typeof points)[number] | null>((a, p) => (!a || p.h.score > a.h.score ? p : a), null));
+  const peaks = byNight.map((ps) => ps.reduce<(typeof points)[number] | null>((a, p) => (!a || p.h.score > a.h.score ? p : a), null));
 
   return (
     <div>
@@ -89,14 +87,12 @@ export function NightsChart({ nights, now }: { nights: NightView[]; now: string 
                 <stop offset="1" stopColor="rgb(139 92 246)" stopOpacity="0" />
               </linearGradient>
             </defs>
-            {spans.map((s, k) => {
-              const pts = line(k);
-              if (!pts.length) return null;
-              const first = points.find((p) => p.night === k)!.x;
-              const last = [...points].reverse().find((p) => p.night === k)!.x;
+            {byNight.map((ps, k) => {
+              if (!ps.length) return null;
+              const pts = ps.map((p) => `${p.x},${100 - p.h.score}`);
               return (
                 <g key={k}>
-                  <path d={`M${first},100 L${pts.join(" L")} L${last},100 Z`} fill="url(#chance-fill)" />
+                  <path d={`M${ps[0].x},100 L${pts.join(" L")} L${ps.at(-1)!.x},100 Z`} fill="url(#chance-fill)" />
                   <path d={`M${pts.join(" L")}`} fill="none" stroke="var(--color-great)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                 </g>
               );

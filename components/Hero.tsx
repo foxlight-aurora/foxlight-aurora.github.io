@@ -1,6 +1,6 @@
 import type { AuroraData } from "@/lib/data";
 import { nightLabel, outlookHighlights, verdict, type Night, type Verdict } from "@/lib/forecast";
-import { date, day, kp, moonWord, needKp, time, tzName, TONE } from "@/lib/format";
+import { date, day, kp, moonWord, needKp, pct, shortName, time, tzName, TONE } from "@/lib/format";
 import { directionsUrl, OULU, scoreLabel, type Tone } from "@/lib/oulu";
 import { InstallApp } from "./InstallApp";
 import { BySpot, SpotSelect } from "./SpotChoice";
@@ -25,7 +25,6 @@ const ALERT = {
 } as const;
 
 const B = "font-medium text-ink";
-const pct = (c: number | null) => (c === null ? "?" : Math.round(c));
 const coord = (v: number, pos: string, neg: string) => `${Math.abs(v).toFixed(2)}°${v >= 0 ? pos : neg}`;
 
 /** The hero's answer: the verdict, tonight, the window it points to and where to go. */
@@ -135,47 +134,37 @@ export function Hero({ data }: { data: AuroraData }) {
     data.now.cloudCity >= 70 && "if clouds clear",
   ].filter(Boolean);
 
+  // One view per spot, built here; the spot picked in the sentence decides which shows.
+  const by = (spots: Spot[], f: (s: Spot) => React.ReactNode) => <BySpot views={Object.fromEntries(spots.map((s) => [s.id, f(s)]))} />;
+  // The text either side of the picker; the picker stays outside the switching text, so it keeps focus while you change it.
+  const around = (spots: Spot[], text: (s: Spot) => [React.ReactNode, React.ReactNode]) => (
+    <>{by(spots, (s) => text(s)[0])}<SpotSelect />{by(spots, (s) => text(s)[1])}</>
+  );
+  const directions = (spots: Spot[]) => by(spots, (s) => <Chip href={directionsUrl(null, s)}>Directions to {shortName(s.name)} <Arrow /></Chip>);
+
   // Left card body below the title: the big number, the sentence, the facts and the directions chip.
+  let title: React.ReactNode = TITLE[v];
   let figure: React.ReactNode;
   let sentence: React.ReactNode;
-  let facts: React.ReactNode;
+  let facts: React.ReactNode = null;
   let go: React.ReactNode = null;
-  let title: React.ReactNode = TITLE[v];
   if (tonight && (v === "tonight" || v === "maybe" || v === "unlikely")) {
-    // Tonight at each spot; the spot picked in the sentence drives the number, the facts, the chip and the chart.
-    const views = data.spots.flatMap((s) => {
-      const n = s.nights.find((x) => x.date === tonight.date);
-      return n ? [{ id: s.id, s, n }] : [];
-    });
-    const by = (f: (s: Spot, n: Night) => React.ReactNode) => <BySpot views={Object.fromEntries(views.map(({ id, s, n }) => [id, f(s, n)]))} />;
+    // Tonight at each spot that has it.
+    const night = (s: Spot) => s.nights.find((x) => x.date === tonight.date)!;
+    const spots = data.spots.filter((s) => s.nights.some((x) => x.date === tonight.date));
     const soon = nextActive && <> Next active days expected around <b className={B}>{date(nextActive.from)}</b> (Kp {nextActive.kp}).</>;
-    const text = Object.fromEntries(views.map(({ id, s, n }) => [id, spotTonight(s, n, now, soon)]));
-    figure = by((_, n) => <Chance value={n.peak} cloudy={n.limit === "clouds" && n.peak < 35} />);
-    // The picker stays outside the switching text, so it keeps focus while you change it.
-    sentence = (
-      <>
-        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [before]]) => [id, before]))} />
-        <SpotSelect />
-        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
-      </>
-    );
-    facts = by((s, n) => <Facts kpValue={n.kp} cloud={n.cloud} moon={n.moon} dark={darkText(s)} />);
-    go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
+    figure = by(spots, (s) => <Chance value={night(s).peak} cloudy={night(s).limit === "clouds" && night(s).peak < 35} />);
+    sentence = around(spots, (s) => spotTonight(s, night(s), now, soon));
+    facts = by(spots, (s) => <Facts kpValue={night(s).kp} cloud={night(s).cloud} moon={night(s).moon} dark={darkText(s)} />);
+    go = directions(spots);
   } else if (v === "now") {
     // Right now at each spot; the picker starts at the best one, and a weaker pick points back to it.
-    const by = (f: (s: Spot) => React.ReactNode) => <BySpot views={Object.fromEntries(data.spots.map((s) => [s.id, f(s)]))} />;
-    const text = Object.fromEntries(data.spots.map((s) => [s.id, spotNow(s, bestNow, data.now.moon.light)]));
-    title = by((s) => (s.now >= 35 ? TITLE.now : "Better elsewhere now"));
-    figure = by((s) => <Chance value={s.now} cloudy={(s.cloud ?? 0) >= 50 && s.now < 35} />);
-    sentence = (
-      <>
-        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [before]]) => [id, before]))} />
-        <SpotSelect />
-        <BySpot views={Object.fromEntries(Object.entries(text).map(([id, [, after]]) => [id, after]))} />
-      </>
-    );
-    facts = by((s) => <Facts kpValue={data.now.effectiveKp} cloud={s.cloud} moon={data.now.moon.light} dark={darkText(s)} now local={data.now.driver === "fmi"} />);
-    go = by((s) => <Chip href={directionsUrl(null, s)}>Directions to {s.name.split(" · ")[0]} <Arrow /></Chip>);
+    const spots = data.spots;
+    title = by(spots, (s) => (s.now >= 35 ? TITLE.now : "Better elsewhere now"));
+    figure = by(spots, (s) => <Chance value={s.now} cloudy={(s.cloud ?? 0) >= 50 && s.now < 35} />);
+    sentence = around(spots, (s) => spotNow(s, bestNow, data.now.moon.light));
+    facts = by(spots, (s) => <Facts kpValue={data.now.effectiveKp} cloud={s.cloud} moon={data.now.moon.light} dark={darkText(s)} now local={data.now.driver === "fmi"} />);
+    go = directions(spots);
   } else {
     // Too bright: no night ahead to show.
     figure = <Chance value={0} cloudy={false} />;
