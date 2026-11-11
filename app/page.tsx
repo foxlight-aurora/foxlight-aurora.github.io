@@ -37,6 +37,10 @@ const FAQ = [
     "Somewhere dark with an open view to the north. Nallikari beach and the northern tip of Hietasaari work on good nights; for fainter displays go further out, to Virpiniemi, Sanginjoki or Hailuoto (Marjaniemi). The list above ranks them for tonight.",
   ],
   [
+    "Can I add Foxlight to my phone's home screen?",
+    "Yes, as a bookmark that opens full screen. On iPhone, open the site in Safari or Chrome, tap Share and choose Add to Home Screen. On Android, open it in Chrome, open the menu and choose Add to Home screen. Nothing is downloaded; it is the same web page.",
+  ],
+  [
     "How does this forecast work?",
     "It combines NOAA's Kp forecast and real-time solar wind with FMI's local auroral activity (R-index), the FMI cloud forecast and the positions of the sun and moon into a chance for each viewing spot, refreshed several times an hour. It is a forecast, not a promise.",
   ],
