@@ -1,7 +1,6 @@
 // Checks the live site: it's updating, the page matches its data, the data passes lib/verify.ts, and its Kp matches
 // NOAA's. Run by .github/workflows/watchdog.yml after every deploy and every 30 minutes: a failure opens the GitHub
-// issue "Live site check failed" (GitHub emails the owner), which is closed again once the checks pass. It also
-// cancels a deploy run that's stuck, since that blocks every newer one.
+// issue "Live site check failed" (GitHub emails the owner), which is closed again once the checks pass.
 // Locally: npx tsx scripts/watchdog.mts (prints the result; exits 1 on failure).
 import type { AuroraData } from "../lib/data";
 import { parseKpForecast } from "../lib/parse";
@@ -69,34 +68,7 @@ async function report(errors: string[]) {
   }
 }
 
-/**
- * Cancels a deploy run that has been stuck for over 20 minutes (a normal one takes ~2). Only one deploy runs at a time,
- * so a stuck one makes GitHub cancel every newer run: on 9 and 17 Nov a deploy sat "waiting" on GitHub's side for days.
- * Asks for unfinished runs by status: a stuck run soon drops out of the latest runs, which are all the cancelled ones.
- * Returns the runs it couldn't cancel, so they're reported. Only in GitHub Actions.
- */
-async function unstick(): Promise<string[]> {
-  const { GITHUB_TOKEN: token, GITHUB_REPOSITORY: repo } = process.env;
-  if (!token || !repo) return [];
-  const api = (path: string, method = "GET") =>
-    fetch(`https://api.github.com/repos/${repo}${path}`, { method, headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } });
-  type Run = { id: number; status: string; run_started_at: string; html_url: string };
-  const failed: string[] = [];
-  for (const status of ["waiting", "in_progress", "queued", "requested", "pending"]) {
-    const { workflow_runs: runs } = (await (await api(`/actions/workflows/deploy.yml/runs?status=${status}&per_page=100`)).json()) as { workflow_runs: Run[] };
-    for (const r of runs ?? []) {
-      if (Date.now() - Date.parse(r.run_started_at) < 20 * 60000) continue;
-      // Force-cancel: a plain cancel fails for a run waiting on its environment (as GitHub's Cancel button did).
-      const ok = (await api(`/actions/runs/${r.id}/force-cancel`, "POST")).ok;
-      console.log(`${ok ? "Cancelled" : "Couldn't cancel"} deploy run ${r.id}, ${r.status} since ${r.run_started_at}`);
-      if (!ok) failed.push(`A deploy run has been ${r.status} since ${r.run_started_at} and couldn't be cancelled, so newer deploys are blocked: ${r.html_url}`);
-    }
-  }
-  return failed;
-}
-
-const stuck = await unstick().catch((e) => [`Couldn't check for stuck deploy runs: ${e}`]);
-const errors = [...stuck, ...(await check().catch((e) => [`The watchdog couldn't check the site: ${e}`]))];
+const errors = await check().catch((e) => [`The watchdog couldn't check the site: ${e}`]);
 console.log(errors.length ? errors.map((e) => `FAILED: ${e}`).join("\n") : `All checks pass on ${SITE}`);
 await report(errors);
 process.exit(errors.length ? 1 : 0);

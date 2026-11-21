@@ -20,9 +20,12 @@ permissions:
 
 # One run at a time, and a run in progress always finishes: a newer run waits (and then fetches the newest data)
 # instead of cancelling it. Cancelling in progress let back-to-back runs cancel every deploy for half an hour.
-# The timeouts stop a stuck run from holding up the next one.
+# The timeouts stop a stuck run from holding up the next one. The deploy job doesn't use the "github-pages"
+# environment (recommended by actions/deploy-pages, not required): twice, on 9 and 17 Nov, a deploy sat "waiting" on
+# its approval check for days, GitHub refused to cancel it, and it blocked every newer run. The group was renamed to
+# step past those runs.
 concurrency:
-  group: deploy # renamed from "pages" to step past a run stuck in that queue (9 Nov); the watchdog now cancels such runs
+  group: site
   cancel-in-progress: false
 
 jobs:
@@ -51,9 +54,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5

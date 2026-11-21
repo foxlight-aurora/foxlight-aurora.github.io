@@ -14,7 +14,6 @@ on:
 permissions:
   contents: read
   issues: write
-  actions: write # to cancel a stuck deploy run (see unstick in scripts/watchdog.mts)
 
 concurrency:
   group: watchdog
