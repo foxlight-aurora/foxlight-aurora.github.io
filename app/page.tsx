@@ -34,7 +34,7 @@ const FAQ = [
   ],
   [
     "Where are the best places to see the northern lights near Oulu?",
-    "Somewhere dark with an open view to the north. Nallikari beach and the northern tip of Hietasaari work on good nights; for fainter displays go further out, to Virpiniemi, Sanginjoki or Hailuoto (Marjaniemi). The list above ranks them for tonight.",
+    "Somewhere dark with an open view to the north. Nallikari beach and the northern tip of Hietasaari work on good nights; for fainter displays go further out, to Virpiniemi, Sanginjoki, Liminganlahti, Martinniemi or Hailuoto (Marjaniemi), or drive an hour to Rokua national park. The list above ranks them for tonight.",
   ],
   [
     "Can I add Foxlight to my phone's home screen?",

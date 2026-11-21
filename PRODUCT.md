@@ -16,7 +16,7 @@ Many check on a phone, outdoors or about to go out, after dark.
 
 ## Product Purpose
 
-Foxlight Aurora answers one question for Oulu, Finland: should I go out to see the northern lights, when, and where? It combines NOAA's Kp forecast and real-time solar wind, FMI's local R-index and cloud forecast, and the sun's position into an hourly chance for six named viewing spots over the next three nights, plus a 27-day outlook. Success is people going out on nights that deliver and staying in on nights that do not.
+Foxlight Aurora answers one question for Oulu, Finland: should I go out to see the northern lights, when, and where? It combines NOAA's Kp forecast and real-time solar wind, FMI's local R-index and cloud forecast, and the sun's position into an hourly chance for nine named viewing spots over the next three nights, plus a 27-day outlook. Success is people going out on nights that deliver and staying in on nights that do not.
 
 ## Positioning
 

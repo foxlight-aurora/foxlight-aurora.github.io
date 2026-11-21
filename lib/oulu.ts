@@ -19,10 +19,13 @@ export type Spot = {
 export const SPOTS: Spot[] = [
   { id: "sanginjoki", name: "Sanginjoki", lat: 64.965, lon: 25.879, minKp: 3, note: "Dark countryside east of the city. Fields with open northern sky." },
   { id: "virpiniemi", name: "Virpiniemi", lat: 65.134, lon: 25.251, minKp: 3, note: "Dark seaside north of the city — wide view over the bay." },
-  { id: "hailuoto", name: "Hailuoto · Marjaniemi", lat: 65.04, lon: 24.562, minKp: 3, note: "The darkest sky near Oulu. Free ferry from Oulunsalo (~1 h)." },
-  { id: "letonniemi", name: "Hietasaari · Letonniemi", lat: 65.06, lon: 25.399, minKp: 4, note: "Northern tip of Hietasaari dunes. Sea horizon to the north, little light." },
+  { id: "hailuoto", name: "Hailuoto · Marjaniemi", lat: 65.04, lon: 24.562, minKp: 3, note: "The darkest sky on the coast near Oulu. Free ferry from Oulunsalo (~1 h)." },
+  { id: "liminganlahti", name: "Liminganlahti · Virkkula tower", lat: 64.8292, lon: 25.3104, minKp: 3, note: "Open bay meadows south of the city (~25 min by car). Park at the nature centre and walk 500 m to the bird tower." },
+  { id: "martinniemi", name: "Martinniemi · Villenniemi", lat: 65.2238, lon: 25.2842, minKp: 3, note: "Seaside point in Haukipudas, north of the city (~30 min by car). Open sea horizon to the north and west." },
+  { id: "letonniemi", name: "Hietasaari · Letonniemi", lat: 65.06, lon: 25.399, minKp: 4, note: "Northern tip of Hietasaari dunes, by the Piispanletto bird tower. Sea horizon to the north, little light." },
   { id: "nallikari", name: "Nallikari beach", lat: 65.03, lon: 25.412, minKp: 4, note: "Easy to reach by bus or bike. Walk onto the beach, away from the lamps." },
   { id: "kuusisaari", name: "Kuusisaari", lat: 65.022, lon: 25.459, minKp: 5, note: "City-centre island park. Works only for strong displays." },
+  { id: "rokua", name: "Rokua · Pooki", lat: 64.5709, lon: 26.4899, minKp: 3, note: "National park with a very dark pine-heath sky, ~1 h by car. Pookivaara tower is a short walk from the car park." },
 ];
 
 /** The Kp at which a spot's chance is even: just above its minKp, so "Kp 3+" (3.33, Kp's next step) is past it. */
