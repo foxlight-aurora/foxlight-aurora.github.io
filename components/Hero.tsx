@@ -32,11 +32,10 @@ export function recommend(data: AuroraData) {
   const tonight = data.nights.find((n) => nightLabel(n.date, now) === "Tonight") ?? data.nights[0] ?? null;
   const bestNow = data.spots.reduce((a, b) => (b.now > a.now ? b : a));
   const v = verdict({ nowScore: bestNow.now, sunAlt: data.now.sunAlt, tonight });
-  const later = data.nights.find((n) => n !== tonight && n.peak >= 15);
-  // The window the card describes: now, tonight, or the next good night.
-  const target = v === "now" ? null : tonight && tonight.peak >= 15 ? tonight : (later ?? null);
+  // The spot to start the picker at: best now, else tonight's best, else the next good night's.
+  const target = tonight && tonight.peak >= 15 ? tonight : data.nights.find((n) => n !== tonight && n.peak >= 15);
   const where = v === "now" ? bestNow : target ? data.spots.find((s) => s.id === target.spotId)! : null;
-  return { now, tonight, bestNow, v, later, target, where };
+  return { now, tonight, bestNow, v, where };
 }
 
 /** "05:00–06:00", plus "· Sun night" when the window starts after midnight (it belongs to the previous evening). */

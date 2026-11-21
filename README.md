@@ -76,22 +76,23 @@ Two safety nets, so a wrong score doesn't wait for someone to notice it:
   step refuses an FMI cloud answer a cache has held over 20 minutes. `lib/data.test.ts` breaks a snapshot in each of
   these ways and checks it's caught.
 - **After every deploy and every 30 minutes** — `.github/workflows/watchdog.yml` runs `scripts/watchdog.mts` on the
-  live site: it's updating (35 min at night, 90 by day, allowing for NOAA's ~15-minute Kp gap after midnight UTC),
-  the page and `data.json` come from the same build, the data passes `verifySnapshot`, and its Kp matches NOAA's. A
+  live site: it's updating (data under 50 min old at night, 90 by day, allowing for NOAA's ~15-minute Kp gap after
+  midnight UTC), the page and `data.json` come from builds at most 20 min apart, the data passes `verifySnapshot`, and
+  its Kp matches NOAA's. A
   failure opens the issue "Live site check failed" (GitHub emails the owner), closed again once the checks pass. Run
   it locally with `npx tsx scripts/watchdog.mts`.
 
 ## Reliable refresh
 
 GitHub's `schedule:` trigger is best effort (runs are often hours late), so [cron-job.org](https://cron-job.org)
-calls the workflow's `workflow_dispatch` on time. Two jobs, timezone UTC, both `POST`ing to
+calls the workflow's `workflow_dispatch` on time. Two jobs, timezone **Europe/Helsinki**, both `POST`ing to
 `https://api.github.com/repos/foxlight-aurora/foxlight-aurora.github.io/actions/workflows/deploy.yml/dispatches`
 with body `{"ref":"main"}`:
 
-| Job | Minutes | Hours (UTC) |
+| Job | Cron (Helsinki time) | Runs |
 |---|---|---|
-| Night | 0, 10, 20, 30, 40, 50 | 13–23, 0–7 |
-| Day | 0 | 8–12 |
+| Night | `*/10 0-10,15-23 * * *` | every 10 min, 15:00–10:59 |
+| Day | `0 11-14 * * *` | hourly, 11:00–14:00 |
 
 Headers: `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2026-03-10`,
 `Authorization: Bearer <token>`. The token is a fine-grained personal access token scoped to this repository only,
