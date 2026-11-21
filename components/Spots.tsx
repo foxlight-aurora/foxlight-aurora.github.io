@@ -52,6 +52,7 @@ export function Spots({ spots, dark }: { spots: Omit<AuroraData["spots"][number]
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setOpen((o) => ({ ...o, [id]: !o[id] }));
 
   const choose = (o: Origin | null) => {
     const next = o ?? CITY_CENTRE;
@@ -156,10 +157,15 @@ export function Spots({ spots, dark }: { spots: Omit<AuroraData["spots"][number]
         {ranked.map((s) => {
           const picked = pick.id === s.id;
           return (
-            <article key={s.id} aria-label={s.name} className={`px-5 py-4 sm:px-6 lg:grid lg:items-center ${ROW} ${picked ? "bg-surface" : "bg-tile"}`}>
+            // Clicking anywhere on the row (but a link or button) opens its details; the name is the keyboard toggle.
+            <article key={s.id} aria-label={s.name} onClick={(e) => !(e.target as Element).closest("a, button") && toggle(s.id)}
+              className={`cursor-pointer px-5 py-4 transition-colors sm:px-6 lg:grid lg:items-start ${ROW} ${picked ? "bg-surface" : "bg-tile hover:bg-surface/60"}`}>
               <div className="min-w-0">
                 <div className="flex items-baseline gap-3">
-                  <h3 className="font-display text-2xl leading-none font-bold tracking-wide uppercase sm:text-[1.7rem]">{s.name}</h3>
+                  <h3 className="font-display text-2xl leading-none font-bold tracking-wide uppercase sm:text-[1.7rem]">
+                    <button type="button" onClick={() => toggle(s.id)} aria-expanded={!!open[s.id]} aria-controls={`note-${s.id}`}
+                      className="text-left uppercase">{s.name}</button>
+                  </h3>
                   <span className="ml-auto font-mono text-xs text-muted tabular-nums lg:ml-0">{s.distanceKm} km</span>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -168,13 +174,12 @@ export function Spots({ spots, dark }: { spots: Omit<AuroraData["spots"][number]
                     className="inline-flex items-center gap-1.5 font-medium text-great underline-offset-4 hover:underline">
                     Directions <Arrow />
                   </a>
-                  <button type="button" onClick={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}
-                    aria-expanded={!!open[s.id]} aria-controls={`note-${s.id}`}
-                    className="inline-flex items-center gap-1 text-muted underline-offset-4 hover:text-ink hover:underline">
-                    Details <Arrow className={`transition-transform ${open[s.id] ? "-rotate-90" : "rotate-90"}`} />
-                  </button>
                 </div>
-                <p id={`note-${s.id}`} hidden={!open[s.id]} className="mt-2 max-w-prose text-sm leading-relaxed text-muted">{s.note}</p>
+                {/* Grows from 0 to its height (grid rows 0fr → 1fr) and fades, so it opens and closes smoothly. */}
+                <div id={`note-${s.id}`} inert={!open[s.id]}
+                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${open[s.id] ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                  <div className="overflow-hidden"><p className="max-w-prose pt-2 text-sm leading-relaxed text-muted">{s.note}</p></div>
+                </div>
               </div>
 
               <dl className="mt-3 grid grid-cols-3 gap-4 border-t border-rule pt-3 lg:contents">
