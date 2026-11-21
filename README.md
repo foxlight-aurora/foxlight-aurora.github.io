@@ -31,7 +31,7 @@ npm run build    # static site in ./out (set BASE_PATH=/repo-name for a project 
   Open pages check `version.json` at once when opened, brought back or back online, and every 2 minutes while open,
   and load a newer build under a one-off address, which gets past the browser's cache. GitHub's CDN ignores the
   address and keeps each file for up to 10 minutes, so a new build reaches visitors within about 10 minutes of its
-  deploy. Runs queue rather than cancel each other, with timeouts, so one stuck deploy can't block updates.
+  deploy. Runs are independent (no queue, no approval step) and time out if they hang, so a run GitHub fails to finish can't block the next one.
 - **Visibility model** — `lib/oulu.ts`:
   `chance = 100 × activity(Kp, spot.minKp, moonlight) × (1 − clouds) × darkness(sun altitude)`.
   Activity is a logistic curve, even at `minKp + 0.25` with a 0.5 Kp scale; spots have an even chance from Kp 3+

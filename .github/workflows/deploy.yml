@@ -6,7 +6,7 @@ on:
   # Times are UTC, so they don't move with Finnish summer/winter time. Every 10 min from 13:00 to 07:59, the hours it
   # can be dark in Oulu at some time of year (15:00–09:59 Finnish winter time); hourly in the hours it never is.
   # Off the hour because GitHub delays busy slots. GitHub runs schedules late or not at all, so an external timer
-  # also triggers workflow_dispatch on the same pattern (see README); overlapping runs queue (concurrency below).
+  # also triggers workflow_dispatch on the same pattern (see README). Runs don't wait for each other (see below).
   schedule:
     - cron: "3-59/10 13-23 * * *"
     - cron: "3-59/10 0-7 * * *"
@@ -18,16 +18,12 @@ permissions:
   pages: write
   id-token: write
 
-# One run at a time, and a run in progress always finishes: a newer run waits (and then fetches the newest data)
-# instead of cancelling it. Cancelling in progress let back-to-back runs cancel every deploy for half an hour.
-# The timeouts stop a stuck run from holding up the next one. The deploy job doesn't use the "github-pages"
-# environment (recommended by actions/deploy-pages, not required): twice, on 9 and 17 Nov, a deploy sat "waiting" on
-# its approval check for days, GitHub refused to cancel it, and it blocked every newer run. The group was renamed to
-# step past those runs.
-concurrency:
-  group: site
-  cancel-in-progress: false
-
+# Every run stands alone: no concurrency group and no "github-pages" environment check (recommended by
+# actions/deploy-pages, not required). With either, one run GitHub fails to finish holds up all the others: on 9 and
+# 17 Nov a deploy sat "waiting" on the environment check for days, GitHub refused to cancel it, and as the queue's
+# holder it got every newer run cancelled, freezing the site until a code change stepped past it. Now a stuck or failed
+# run only loses its own update; the next one, 10 minutes later, deploys regardless. Two runs rarely overlap (they
+# take ~2 minutes), and if they do, the later deploy wins with data a few minutes newer. The timeouts end hung jobs.
 jobs:
   build:
     runs-on: ubuntu-latest
